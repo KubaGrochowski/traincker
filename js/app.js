@@ -431,7 +431,6 @@
     save(); userAct = true; justSet = `${xi}:${si}`; render();
     navigator.vibrate?.(12);
     const row = document.querySelector(`.srow[data-x="${xi}"][data-s="${si}"]`);
-    if (row) bubbles(row.querySelector('.chk'), t ? 16 : 7);
     if (t) { toast(`Nowy rekord (${PR_NAME[t]}): ${exOf(e).name} · ${fmtSet(s, k, true)}`); if (row) setTimeout(() => ripple(row.getBoundingClientRect().right - 30, row.getBoundingClientRect().top + 20, 1.6), 100); }
     // przerwa: w superserii dopiero po ostatnim ćwiczeniu z grupy
     const next = a.ex[xi + 1], inSup = e.sup && next && next.sup === e.sup;
@@ -583,7 +582,6 @@
         const tile = document.querySelector(`[data-w="${CSS.escape(id)}"]`);
         const go = () => { delete state.workouts[id]; finished().filter(x => x.start > w.start).reverse().forEach(x => { x.prs = computePRs(x); }); save(); render(); toast('Usunięto'); };
         if (!tile || calm()) { go(); return; }
-        bubbles(tile, 10);
         tile.animate({ opacity: [1, 0], transform: ['none', 'translateY(24px) scale(.96)'] }, { duration: 380, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = go;
       });
     });
@@ -624,7 +622,7 @@
     overlay.querySelectorAll('[data-tpl]').forEach(b => b.addEventListener('click', () => {
       const t = TEMPLATES.find(x => x.id === b.dataset.tpl), base = Date.now();
       t.rs.forEach(([name, ex], i) => { const r = { id: uid('r'), name, note: t.name, created: base + i, ex: ex.map(([eid, n, reps]) => ({ eid, n, reps, sup: null })) }; state.routines[r.id] = r; });
-      save(); b.disabled = true; b.innerHTML = `${CHECK}<span>Dodano</span>`; bubbles(b, 8);
+      save(); b.disabled = true; b.innerHTML = `${CHECK}<span>Dodano</span>`;
       toast(`Dodano: ${t.rs.map(r => r[0]).join(', ')}`); render();
     }));
   }
@@ -673,7 +671,7 @@
     const sup = ss ? uid('s') : null;
     ids.forEach(id => a.ex.push(newEntry(id, 0, '', sup)));
     save(); close(); render();
-    setTimeout(() => { const c = document.querySelector(`.exc[data-x="${a.ex.length - ids.length}"]`); if (c) { c.scrollIntoView({ behavior: calm() ? 'auto' : 'smooth', block: 'center' }); bubbles(c, 8); } }, 60);
+    setTimeout(() => { const c = document.querySelector(`.exc[data-x="${a.ex.length - ids.length}"]`); if (c) { c.scrollIntoView({ behavior: calm() ? 'auto' : 'smooth', block: 'center' }); } }, 60);
   }
   function drawPicker() {
     const p = pick;
@@ -929,7 +927,7 @@
     if (state.settings.sound) beep();
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') navigator.serviceWorker?.getRegistration().then(r => r?.showNotification('Koniec przerwy', { body: 'Czas na kolejną serię', tag: 'ggym-rest', icon: 'icons/icon-192.png' })).catch(() => { });
     const l = $('rb-left'), f = $('rb-fill'); if (l) l.textContent = '0:00'; if (f) f.style.width = '0';
-    restBar.classList.add('end'); if (!calm()) bubbles(restBar, 12);
+    restBar.classList.add('end');
     toast('Koniec przerwy — kolejna seria');
     setTimeout(() => { if (!rest) { restBar.hidden = true; restBar.innerHTML = ''; } }, 2200);
   }
@@ -956,7 +954,7 @@
     if (pe && pick) {
       const id = pe.dataset.pex;
       if (pick.mode === 'swap') { const p = pick; pick = null; p.cb([id]); return; }
-      const i = pick.sel.indexOf(id); if (i >= 0) pick.sel.splice(i, 1); else { pick.sel.push(id); if (!calm()) bubbles(pe.querySelector('.pk'), 5); }
+      const i = pick.sel.indexOf(id); if (i >= 0) pick.sel.splice(i, 1); else pick.sel.push(id);
       pe.classList.toggle('on', i < 0); drawPickFoot(); return;
     }
     const pm = e.target.closest('[data-pmus]'); if (pm && pick) { pick.mus = pm.dataset.pmus; overlay.querySelectorAll('[data-pmus]').forEach(b => b.classList.toggle('on', b === pm)); drawPickList(); return; }
@@ -1123,7 +1121,7 @@
     if ((b = T('[data-pw]'))) { pWeeks = +b.dataset.pw; animList = true; render(); return; }
     if ((b = T('[data-cal]'))) { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + +b.dataset.cal, 1); const c = b.closest('.scard'); c.innerHTML = calendarHtml(); c.querySelector('.calg').classList.add('enter'); return; }
     if ((b = T('[data-cday]'))) { openDay(b.dataset.cday); return; }
-    const ring = T('.ring'); if (ring && !calm()) { ripple(e.clientX, e.clientY, 1.4); bubbles(ring, 8); }
+    const ring = T('.ring'); if (ring && !calm()) ripple(e.clientX, e.clientY, 1.4);
   });
   function openStart() {
     const rs = routinesSorted();
@@ -1175,31 +1173,13 @@
     clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2800);
   }
 
-  /* ---------- morskie efekty: bąbelki, kręgi na wodzie, fala przez cały ekran, morze w tle ---------- */
+  /* ---------- morskie efekty: kręgi na wodzie, fala przez cały ekran, morze w tle ---------- */
   const sea = document.createElement('div');
   sea.className = 'sea'; sea.setAttribute('aria-hidden', 'true'); sea.innerHTML = SEA_SVG;
   document.body.appendChild(sea);
   const bed = document.createElement('div');
   bed.className = 'seabed'; bed.setAttribute('aria-hidden', 'true'); bed.innerHTML = SEA_SVG;
   document.body.appendChild(bed);
-  function bubbles(el, n = 11) {
-    if (calm() || !el) return;
-    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    for (let i = 0; i < n; i++) {
-      const s = 4 + Math.random() * 7, dx = (Math.random() - .5) * Math.min(r.width, 220) * 1.2, rise = 36 + Math.random() * 70, sway = (Math.random() - .5) * 18;
-      const b = document.createElement('i');
-      b.className = 'bubble';
-      Object.assign(b.style, { left: cx - s / 2 + 'px', top: cy - s / 2 + 'px', width: s + 'px', height: s + 'px' });
-      document.body.appendChild(b);
-      b.animate([
-        { transform: 'translate(0,0) scale(.3)', opacity: 0 },
-        { transform: `translate(${dx * .4}px,${-rise * .3}px) scale(1)`, opacity: 1, offset: .2 },
-        { transform: `translate(${dx * .7 + sway}px,${-rise * .7}px) scale(1)`, opacity: .9, offset: .7 },
-        { transform: `translate(${dx}px,${-rise}px) scale(1.5)`, opacity: 0 }
-      ], { duration: 700 + Math.random() * 500, delay: Math.random() * 120, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'backwards' }).onfinish = () => b.remove();
-      setTimeout(() => b.remove(), 1700);
-    }
-  }
   function ripple(x, y, k = 1) {
     if (calm() || (!x && !y)) return;
     [0, 140].forEach(delay => {
@@ -1216,29 +1196,15 @@
     if (calm()) return;
     sea.classList.remove('swell'); void sea.offsetWidth; sea.classList.add('swell');
     setTimeout(() => sea.classList.remove('swell'), 2700);
-    for (let i = 0; i < 26; i++) {
-      const s = 5 + Math.random() * 10, x = Math.random() * innerWidth;
-      const b = document.createElement('i');
-      b.className = 'bubble';
-      Object.assign(b.style, { left: x + 'px', top: innerHeight - 10 + 'px', width: s + 'px', height: s + 'px' });
-      document.body.appendChild(b);
-      const rise = innerHeight * (.3 + Math.random() * .45), sw = (Math.random() - .5) * 60;
-      b.animate([
-        { transform: 'translate(0,0)', opacity: 0 },
-        { transform: `translate(${sw * .5}px,${-rise * .4}px)`, opacity: .9, offset: .3 },
-        { transform: `translate(${sw}px,${-rise}px) scale(1.4)`, opacity: 0 }
-      ], { duration: 1400 + Math.random() * 900, delay: Math.random() * 500, easing: 'ease-out', fill: 'backwards' }).onfinish = () => b.remove();
-      setTimeout(() => b.remove(), 3200);
-    }
   }
   // Koniec treningu: fala przez ekran (zawsze przy celu tygodnia albo rekordach), podskok liczby.
   function celebrate(goal, prs) {
     navigator.vibrate?.([15, 60, 25]);
     if (calm()) return;
     $('hero-num').animate({ transform: ['scale(1)', 'scale(1.14)', 'scale(.98)', 'scale(1)'] }, { duration: 900, easing: 'ease-out' });
-    if (goal || prs) swell(); else bubbles($('hero-num'), 14);
+    if (goal || prs) swell();
   }
-  // Morze w tle: co kilka sekund z dna wypływa pojedynczy bąbelek (nie podczas dotyku i pisania — iPhone).
+  // iPhone: dotknięcie pola czasem nie otwiera klawiatury, więc pole dostaje focus() w obsłudze dotyku.
   let tStart = null;
   document.addEventListener('touchstart', e => { const t = e.touches[0]; tStart = t ? [t.clientX, t.clientY] : null; }, { passive: true });
   document.addEventListener('touchend', e => {
@@ -1246,26 +1212,6 @@
     const t = e.changedTouches[0], moved = !tStart || !t || Math.hypot(t.clientX - tStart[0], t.clientY - tStart[1]) > 10;
     if (f && !moved && document.activeElement !== f && !f.disabled) f.focus();
   }, { passive: true });
-  let lastTouch = 0;
-  ['touchstart', 'pointerdown', 'focusin'].forEach(t => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
-  function ambient() {
-    if (calm() || document.hidden || overlay.innerHTML || !$('auth').hidden) return;
-    if (Date.now() - lastTouch < 4000 || document.activeElement?.matches('input, textarea, select')) return;
-    const s = 4 + Math.random() * 9, x = Math.random() * innerWidth;
-    const b = document.createElement('i');
-    b.className = 'amb';
-    Object.assign(b.style, { left: x + 'px', top: innerHeight + 'px', width: s + 'px', height: s + 'px' });
-    document.body.appendChild(b);
-    const rise = innerHeight * (.5 + Math.random() * .5), sway = (Math.random() - .5) * 80;
-    b.animate([
-      { transform: 'translate(0,0)', opacity: 0 },
-      { transform: `translate(${sway * .3}px,${-rise * .25}px)`, opacity: .7, offset: .15 },
-      { transform: `translate(${-sway * .4}px,${-rise * .6}px)`, opacity: .55, offset: .6 },
-      { transform: `translate(${sway}px,${-rise}px) scale(1.3)`, opacity: 0 }
-    ], { duration: 7000 + Math.random() * 5000, easing: 'linear' }).onfinish = () => b.remove();
-    setTimeout(() => b.remove(), 13000);
-  }
-  setInterval(ambient, 2600);
 
   /* ---------- telefon: bez przybliżania ---------- */
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));

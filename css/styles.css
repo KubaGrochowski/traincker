@@ -269,8 +269,7 @@ button:not(:disabled):active{transform:scale(.96)}
 .sea.swell{display:block;animation:flood 2.5s cubic-bezier(.45,0,.55,1) forwards}
 @keyframes flood{from{transform:translateY(0)}to{transform:translateY(calc(-200vh - 120px))}}
 
-/* bąbelki i kręgi na wodzie */
-.bubble{position:fixed;z-index:50;pointer-events:none;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--sea) 80%,#fff);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.75) 0 16%,transparent 22%),color-mix(in srgb,var(--sea) 14%,transparent)}
+/* kręgi na wodzie */
 .ripple{position:fixed;z-index:50;pointer-events:none;width:70px;height:70px;border-radius:50%;border:2px solid color-mix(in srgb,var(--sea) 70%,transparent)}
 /* pasek timera płynie jak prąd */
 .tbar i{background:linear-gradient(90deg,var(--accent),var(--sea),var(--accent));background-size:200% 100%;animation:tide 2.4s linear infinite}
@@ -510,8 +509,7 @@ button:not(:disabled):active{transform:scale(.96)}
 .split-sum{font:500 12px var(--f-mono);color:var(--ink-3);text-align:center}
 .split-sum.bad{color:var(--warn)}
 
-/* morze w tle: pojedyncze bąbelki płyną od dołu ekranu */
-.amb{position:fixed;z-index:0;pointer-events:none;border-radius:50%;border:1px solid color-mix(in srgb,var(--sea) 55%,transparent);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.5) 0 14%,transparent 20%),color-mix(in srgb,var(--sea) 7%,transparent)}
+
 .wrap{position:relative;z-index:1}
 /* dno: delikatne fale przy dolnej krawędzi ekranu */
 .seabed{position:fixed;left:0;right:0;bottom:0;height:46px;z-index:0;pointer-events:none;opacity:.55}
@@ -552,7 +550,7 @@ button:not(:disabled):active{transform:scale(.96)}
 input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;pointer-events:auto}
 
 /* ekran logowania: bez animacji w tle (iPhone potrafi wtedy ignorować dotknięcie pól) */
-body.gate .seabed,body.gate .amb,body.gate .sea{display:none}
+body.gate .seabed,body.gate .sea{display:none}
 body.gate .auth-brand img,body.gate .auth-card{animation:none}
 .ver{text-align:center;font:500 11px var(--f-mono);color:var(--ink-3);margin-top:-8px}
 
