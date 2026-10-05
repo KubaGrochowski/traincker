@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
-<link rel="stylesheet" href="css/styles.css?v=5">
+<link rel="stylesheet" href="css/styles.css?v=6">
 </head>
 <body>
 <section class="auth" id="auth" hidden>
@@ -36,36 +36,23 @@
   </div>
 </section>
 
-<main class="wrap" id="app-main">
-  <header class="top">
-    <div>
-      <div class="brandrow"><img class="brand" src="icons/icon-192.png" alt="" width="22" height="22"><div class="eyebrow" id="top-label"></div></div>
-      <div class="o-hero"><b id="hero-num">0</b><span id="hero-sub"></span></div>
-    </div>
-    <div class="actions">
-      <button class="add" id="start-btn"><span class="plus" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 6v4M14.5 6v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="3" y="3.5" width="2.6" height="9" rx="1" fill="currentColor"/><rect x="10.4" y="3.5" width="2.6" height="9" rx="1" fill="currentColor"/><path d="M5.6 8h4.8" stroke="currentColor" stroke-width="2"/></svg></span><span id="start-label">Start treningu</span></button>
-      <button class="icon" id="menu-btn" aria-label="Menu"><svg class="ic-dots" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="13" cy="8" r="1.6" fill="currentColor"/></svg><svg class="ic-burger" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-    </div>
-  </header>
-
-  <nav class="vtabs" role="tablist" aria-label="Widok">
-    <button class="vtab" role="tab" data-view="workout" aria-selected="true">Trening</button>
-    <button class="vtab" role="tab" data-view="history" aria-selected="false">Historia</button>
-    <button class="vtab" role="tab" data-view="routines" aria-selected="false">Plany</button>
-    <button class="vtab" role="tab" data-view="exercises" aria-selected="false">Ćwiczenia</button>
-    <button class="vtab" role="tab" data-view="progress" aria-selected="false">Postępy</button>
+<main class="shell" id="app-main">
+  <div id="tab-view"></div>
+  <button class="livebar" id="livebar" hidden></button>
+  <button class="fab" id="fab" aria-label="Nowy trening"><svg width="22" height="22" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  <nav class="tabbar" id="tabbar" aria-label="Zakładki">
+    <button data-tab="log" aria-label="Treningi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4.5" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 2.8v3.4M16 2.8v3.4M4 9.5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 14.5l2.3 2.2 4.7-4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Treningi</span></button>
+    <button data-tab="routines" aria-label="Plany"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor"/></svg><span>Plany</span></button>
+    <button data-tab="exercises" aria-label="Ćwiczenia"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 9.5v5M21.5 9.5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.6" y="6" width="3.4" height="12" rx="1.2" stroke="currentColor" stroke-width="1.7"/><rect x="16" y="6" width="3.4" height="12" rx="1.2" stroke="currentColor" stroke-width="1.7"/><path d="M8 12h8" stroke="currentColor" stroke-width="1.8"/></svg><span>Ćwiczenia</span></button>
+    <button data-tab="progress" aria-label="Postępy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19.5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5.5" y="12" width="3" height="5.5" rx="1" fill="currentColor"/><rect x="10.5" y="8" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15.5" y="4.5" width="3" height="13" rx="1" fill="currentColor"/></svg><span>Postępy</span></button>
+    <button data-tab="more" aria-label="Więcej"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Więcej</span></button>
   </nav>
-
-  <section id="view-workout"></section>
-  <section id="view-history" hidden></section>
-  <section id="view-routines" hidden></section>
-  <section id="view-exercises" hidden></section>
-  <section id="view-progress" hidden></section>
 </main>
 
-<div class="restbar" id="restbar" hidden></div>
+<section class="layer" id="wk-layer" hidden></section>
+<section class="layer dt" id="dt-layer" hidden></section>
 <div id="overlay"></div>
-<script src="js/cloud.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/cloud.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Traincker
 
-Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Wygląd 1:1 jak Grochu's tracker i Grochu's makro (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent fioletowy.
+Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Wygląd 1:1 jak Grochu's tracker i Grochu's makro (czerń, Outfit + JetBrains Mono, morskie animacje), akcent żółty jak w logo.
 Adres: https://kubagrochowski.github.io/traincker/
 
 Czysty HTML/CSS/JS, bez budowania. Konto i synchronizacja przez ten sam projekt Supabase co tracker i makro (to samo konto e-mail + hasło). Działa offline (PWA).
@@ -17,15 +17,16 @@ i otwórz http://localhost:5175.
 
 Supabase → SQL Editor → New query → wklej `supabase/setup.sql` → Run. Tworzy tabelę `gym_data` (RLS, Realtime). Bez tego aplikacja działa na urządzeniu, ale nie synchronizuje się z chmurą.
 
-## Funkcje (jak w RepCount)
+## Układ (jak RepCount)
 
-- **Trening:** pusty albo z planu. Każde ćwiczenie dostaje serie i ciężary z ostatniego razu (kolumna „Poprzednio”, klik = przepisz). Rodzaje serii: normalna, R – rozgrzewkowa (bez objętości i rekordów), D – drop set, U – do upadku. Odhaczenie ✓ startuje przerwę (domyślna w ustawieniach albo osobna dla ćwiczenia; −15/+15/Pomiń, dźwięk, wibracja, powiadomienie). Superserie (przerwa dopiero po ostatnim ćwiczeniu z grupy), notatki do ćwiczenia i treningu, zamiana i przesuwanie ćwiczeń. Nowy rekord od razu oznaczony „PR”.
-- **Koniec treningu:** podsumowanie (czas, objętość, serie, rekordy), fala przez ekran przy rekordzie albo celu tygodnia, „Zaktualizuj plan”, gdy zmieniły się ćwiczenia lub liczba serii.
-- **Historia:** treningi po miesiącach, wyszukiwarka, szczegóły z 1RM każdej serii, „Powtórz trening”, „Zapisz jako plan”, edycja (dzień, godzina, czas, serie) i usuwanie.
-- **Plany:** własne (serie × powtórzenia, kolejność, superserie, notatka) i gotowe: Push/Pull/Legs, Góra/Dół, FBW, 5×5.
-- **Ćwiczenia:** ~80 ćwiczeń po partiach + własne (ciężar × powt., masa ciała, na czas, cardio). Karta ćwiczenia: wykresy (szacowany 1RM, najcięższy, objętość, powtórzenia, serie; 3 mies./rok/wszystko), rekordy (1RM, najcięższy, objętość, tabela 1–12 powtórzeń, wszystkie lata lub rok), historia.
-- **Postępy:** treningi i objętość tygodniowo (8 tyg./6 mies./rok), seria tygodni w celu, kalendarz, masa ciała z wykresem, serie na partie mięśni, lista rekordów.
-- **Ustawienia (menu ⋯ / ☰):** kg/lb, domyślna przerwa, cel treningów w tygodniu, dźwięk, powiadomienia; masa ciała; eksport do Excela (CSV).
+Dolny pasek: **Treningi · Plany · Ćwiczenia · Postępy · Więcej**. Akcent żółty jak w logo, wygląd jak Grochu's tracker (czerń, Outfit + JetBrains Mono, fale).
+
+- **Treningi:** dziennik treningów po miesiącach (data, nazwa, ćwiczenia z „3 × 100 kg”, serie, objętość, rekordy), wyszukiwarka, przycisk **+** = nowy trening (pusty albo z planu). Trwający trening można zwinąć — pasek „Wróć” nad zakładkami.
+- **Ekran treningu:** u góry ⌄ (zwiń), **Zakończ**, data i czas trwania, ⏰ timer i ⋯ (notatka, odrzuć). Karty ćwiczeń z seriami **Kg / Powt. / Notatka**; szare liczby to wynik z ostatniego razu — dotknięcie numeru serii wpisuje go od razu. ⋯ przy serii: rozgrzewkowa (R), drop set (↓), do upadku (U), wyczyść, usuń. Pod kartą: **Dodaj serię**, notatka, wykres, rekordy. Superserie w jednej karcie (A, B… i serie A1, B1, A2…). Rekord oznaczony gwiazdką. Po wpisaniu serii startuje przerwa (duże koło, −15 s / stop / +15 s, dźwięk, wibracja, powiadomienie).
+- **Plany:** lista planów i gotowe podziały (Push/Pull/Legs, Góra/Dół, FBW, 5×5). Ekran planu: duży przycisk **Start!**, nazwa, „Ciężary i powtórzenia: Ostatnie / Z tego planu”, notatka, ćwiczenia z liczbą serii rozgrzewkowych i roboczych.
+- **Ćwiczenia:** biblioteka ~80 ćwiczeń po partiach + własne. Ekran ćwiczenia: **Historia** (każdy trening: tabela serii i pasek Powt. / Serie / 1RM / Objętość), **Wykres** (szacowany 1RM, najcięższy, objętość, powtórzenia, serie; linia trendu, dotknij wykresu, by wybrać trening; historia rekordów), **Rekordy** (rekordy powtórzeń, inne rekordy, podział na lata).
+- **Postępy:** cel tygodnia (koło z wodą), treningi i objętość tygodniowo, kalendarz, masa ciała, partie mięśni, pobite rekordy.
+- **Więcej:** konto, kg/lb, przerwa, timer po każdej serii, dźwięk, powiadomienia, cel tygodnia, masa ciała, eksport CSV.
 
 Po zmianach w plikach podbij wersję: `VERSION` w `sw.js` oraz `?v=` w `index.html` i w `SHELL` w `sw.js`.
 
