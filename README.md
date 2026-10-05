@@ -1,4 +1,4 @@
-# Grochu's gym
+# Traincker
 
 Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Wygląd 1:1 jak Grochu's tracker i Grochu's makro (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent fioletowy.
 Czysty HTML/CSS/JS, bez budowania. Konto i synchronizacja przez ten sam projekt Supabase co tracker i makro (to samo konto e-mail + hasło). Działa offline (PWA).

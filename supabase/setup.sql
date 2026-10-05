@@ -1,4 +1,4 @@
--- Grochu's gym — jednorazowa konfiguracja bazy (Supabase → SQL Editor → New query → wklej → Run).
+-- Traincker — jednorazowa konfiguracja bazy (Supabase → SQL Editor → New query → wklej → Run).
 -- Ten sam projekt Supabase co Grochu's tracker i Grochu's makro, więc konto (e-mail + hasło) jest wspólne.
 
 -- Dane użytkownika: jeden wiersz na konto (ustawienia, treningi, plany, własne ćwiczenia, masa ciała).

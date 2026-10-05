@@ -1,4 +1,4 @@
-/* Grochu's gym — dziennik treningów na siłowni (jak RepCount): serie, ciężary, powtórzenia, przerwy, plany, rekordy i wykresy.
+/* Traincker — dziennik treningów na siłowni (jak RepCount): serie, ciężary, powtórzenia, przerwy, plany, rekordy i wykresy.
    Dane w localStorage + Supabase (js/cloud.js). Wszystkie ciężary zapisywane w kg, wyświetlane w kg albo lb. */
 (() => {
   'use strict';
@@ -1007,7 +1007,7 @@
     finished().slice().reverse().forEach(w => w.ex.forEach(e => { const x = exOf(e); e.sets.forEach((s, i) => rows.push([key(new Date(w.start)), hhmm(w.start), w.name, r0((w.end - w.start) / 60000), x.name, muscleName(x.muscle), i + 1, TN[s.t || 'n'], dec(s.kg), s.r ?? '', s.s ?? '', dec(s.km), s.kcal ?? '', s.pr ? 'tak' : '', i ? '' : e.note])); }));
     if (rows.length < 2) { toast('Brak treningów do eksportu'); return; }
     const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `grochu-gym-${todayKey()}.csv`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `traincker-${todayKey()}.csv`;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     close(); toast(`Wyeksportowano ${rows.length - 1} serii`);
   }

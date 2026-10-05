@@ -1,4 +1,4 @@
-/* Grochu's gym — konto i synchronizacja z Supabase na żywo (logowanie e-mailem i hasłem, Realtime).
+/* Traincker — konto i synchronizacja z Supabase na żywo (logowanie e-mailem i hasłem, Realtime).
    Bez zewnętrznych bibliotek: Supabase Auth (GoTrue), REST (PostgREST) i Edge Functions przez fetch.
 
    Model synchronizacji (jak w Grochu's tracker): stan aplikacji jest spłaszczany do elementów (ustawienia, trening, plan, ćwiczenie, pomiar).
