@@ -1,12 +1,12 @@
 /* Grochu's gym — service worker: aplikacja działa offline (także w piwnicy na siłowni). Dane treningów nie są tu przechowywane (zostają w localStorage). */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `ggym-${VERSION}`;
 const SHELL = [
   './',
   'index.html',
-  'css/styles.css?v=1',
-  'js/cloud.js?v=1',
-  'js/app.js?v=1',
+  'css/styles.css?v=2',
+  'js/cloud.js?v=2',
+  'js/app.js?v=2',
   'manifest.webmanifest',
   'icons/favicon.png',
   'icons/icon-192.png',
