@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 6;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 7;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -709,10 +709,10 @@
     const p = pick;
     overlay.innerHTML = sheet(p.mode === 'swap' ? 'Zamień ćwiczenie' : 'Dodaj ćwiczenia', '', `
       <label class="hsearch">${SEARCH}<input id="p-q" type="search" placeholder="Szukaj" value="${esc(p.q)}" autocomplete="off"></label>
+      <div class="ilist"><button class="irow addrow" id="p-new">${PLUSC}<span class="ir-t"><b>Nowe własne ćwiczenie</b></span></button></div>
       ${p.mode === 'swap' ? '' : `<label class="switch"><span>Superseria</span><input type="checkbox" id="p-ss" ${p.ss ? 'checked' : ''}><i></i></label>`}
       <div id="p-mus">${musChips(p.mus, 'data-pmus')}</div>
       <div class="plist" id="p-list"></div>
-      <button class="linkish" id="p-new">+ Nowe własne ćwiczenie</button>
       ${p.mode === 'swap' ? '' : '<div class="pfoot" id="p-foot"></div>'}`, 'Wybór ćwiczeń', 'tall picker');
     drawPickList();
     $('p-q').addEventListener('input', e => { p.q = e.target.value; drawPickList(); });

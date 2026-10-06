@@ -978,3 +978,7 @@ h1.big{font:700 30px/1.08 var(--f-display);letter-spacing:-.025em;margin:6px 0 1
 .ring .wv.b{background:color-mix(in srgb,var(--sea) 20%,transparent)}
 .ring.full .wv{background:color-mix(in srgb,var(--accent) 52%,transparent)}
 .ring-t small{color:var(--ink)}
+/* okienka: elementy nie ściskają się, wyszukiwarka ma stałą wysokość (wcześniej skakała przy wpisywaniu) */
+.sheet > *{flex-shrink:0}
+.hsearch{flex:none;position:relative}
+.sheet .plist{min-height:50vh}
