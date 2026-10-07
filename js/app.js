@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 17;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 18;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -370,10 +370,10 @@
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
   function wCard(w, i) {
     const s = wStats(w), lines = w.ex.slice(0, 7).map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('') + (w.ex.length > 7 ? `<li class="more"><span>i ${w.ex.length - 7} więcej…</span></li>` : '');
-    return `<button class="wcard" data-w="${w.id}" style="--i:${i}"><div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-t">${hhmm(w.start)} · ${fmtDur(s.ms)}</span></div><b class="wc-n">${esc(w.name)}</b><ul>${lines}</ul><div class="wc-f"><span>${s.sets} ${plural(s.sets, 'seria', 'serie', 'serii')}</span>${s.vol ? `<span>${fmtVol(s.vol)} ${U()}</span>` : ''}${w.prs?.length ? `<span class="pr">${STARS} ${w.prs.length} ${plural(w.prs.length, 'rekord', 'rekordy', 'rekordów')}</span>` : ''}</div></button>`;
+    return `<button class="wcard" data-w="${w.id}" style="--i:${i}"><div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-t">${hhmm(w.start)} · ${fmtDur(s.ms)}</span></div><b class="wc-n">${esc(w.name)}</b><ul>${lines}</ul>${w.prs?.length ? `<div class="wc-f"><span class="pr">${STARS} ${w.prs.length} ${plural(w.prs.length, 'rekord', 'rekordy', 'rekordów')}</span></div>` : ''}</button>`;
   }
   function renderLog() {
-    const wk = weekWorkouts(0).length, st = weekStreak(), g = state.settings.weekGoal, q = norm(hQuery.trim());
+    const q = norm(hQuery.trim());
     const all = finished().filter(w => !q || norm(w.name).includes(q) || w.ex.some(e => norm(exOf(e).name).includes(q)));
     let html = '', i = 0, n = 0, lastM = '';
     for (const w of all) {
@@ -384,9 +384,8 @@
     }
     if (!all.length) html = q ? '<p class="empty">Nic nie pasuje do wyszukiwania</p>' : emptyCard('Zacznij pierwszy trening', 'Naciśnij +, wybierz plan albo pusty trening i dodawaj serie. Następnym razem ciężary z ostatniego treningu podpowiedzą się same.', '<button class="primary acc" data-start>Nowy trening</button>');
     if (all.length > hLimit) html += '<button class="allweek more" data-more>Pokaż starsze</button>';
-    const sub = `<b>${wk}</b> z ${g} w tym tygodniu${st ? ` · seria <b>${st}</b> ${plural(st, 'tydzień', 'tygodnie', 'tygodni')}` : ''}`;
     if (!tabView.querySelector('#h-q') || (all.length && tabView.querySelector('span#h-q'))) tabView.innerHTML = `<div id="log-h"></div>${finished().length ? `<label class="hsearch">${SEARCH}<input id="h-q" type="search" placeholder="Szukaj treningu lub ćwiczenia" autocomplete="off"></label>` : '<span id="h-q" hidden></span>'}<div class="wlist" id="w-list"></div>`;
-    $('log-h').innerHTML = head('Treningi', sub);
+    $('log-h').innerHTML = head('Treningi', '');
     const list = $('w-list'); list.className = 'wlist' + (animTab ? ' enter' : ''); list.innerHTML = html;
   }
 
