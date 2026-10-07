@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 15;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 16;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -255,6 +255,7 @@
   const STARS = '<svg width="11" height="11" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8l2.5 5.3 5.8.7-4.3 4 1.1 5.7L10 14.7l-5.1 2.8L6 11.8l-4.3-4 5.8-.7z" fill="currentColor"/></svg>';
   const AGAIN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const STOP = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="5" y="5" width="12" height="12" rx="2.5" fill="currentColor"/></svg>';
+  const TRASH = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9.5 7V4.8h5V7M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const PLAY = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.8v12.4L16 10z" fill="currentColor"/></svg>';
 
   const $ = id => document.getElementById(id);
@@ -370,7 +371,7 @@
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
   function wCard(w, i) {
     const s = wStats(w), lines = w.ex.slice(0, 7).map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('') + (w.ex.length > 7 ? `<li class="more"><span>i ${w.ex.length - 7} więcej…</span></li>` : '');
-    return `<button class="wcard" data-w="${w.id}" style="--i:${i}"><div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-t">${hhmm(w.start)} · ${fmtDur(s.ms)}</span></div><b class="wc-n">${esc(w.name)}</b><ul>${lines}</ul><div class="wc-f"><span>${s.sets} ${plural(s.sets, 'seria', 'serie', 'serii')}</span>${s.vol ? `<span>${fmtVol(s.vol)} ${U()}</span>` : ''}${w.prs?.length ? `<span class="pr">${STARS} ${w.prs.length} ${plural(w.prs.length, 'rekord', 'rekordy', 'rekordów')}</span>` : ''}</div></button>`;
+    return `<div class="swr" style="--i:${i}"><div class="sw-act" aria-hidden="true"><button tabindex="-1" data-swdel="${w.id}">${TRASH}<span>Usuń</span></button></div><button class="wcard" data-w="${w.id}"><div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-t">${hhmm(w.start)} · ${fmtDur(s.ms)}</span></div><b class="wc-n">${esc(w.name)}</b><ul>${lines}</ul><div class="wc-f"><span>${s.sets} ${plural(s.sets, 'seria', 'serie', 'serii')}</span>${s.vol ? `<span>${fmtVol(s.vol)} ${U()}</span>` : ''}${w.prs?.length ? `<span class="pr">${STARS} ${w.prs.length} ${plural(w.prs.length, 'rekord', 'rekordy', 'rekordów')}</span>` : ''}</div></button></div>`;
   }
   function renderLog() {
     const wk = weekWorkouts(0).length, st = weekStreak(), g = state.settings.weekGoal, q = norm(hQuery.trim());
@@ -1267,6 +1268,9 @@
   function setTab(t) { tab = t; animTab = true; stack = []; try { localStorage.setItem('ggym.tab', t); } catch (_) { } tabView.innerHTML = ''; render(); window.scrollTo({ top: 0 }); }
   document.addEventListener('click', e => {
     if (e.target.closest('#overlay')) return;
+    if (swSuppress) return;
+    { const del = e.target.closest('[data-swdel]'); if (del) { const c = del.closest('.swr')?.querySelector('.wcard'); if (c) swipeDelete(c); return; } }
+    if (swOpen) { const onOpen = e.target.closest('.wcard') === swOpen; closeSw(); if (onOpen || e.target.closest('.wcard')) return; }
     const T = s => e.target.closest(s); let b;
     // zakładki i główne przyciski
     if ((b = T('#tabbar [data-tab]'))) { if (b.dataset.tab === tab && !stack.length) window.scrollTo({ top: 0, behavior: 'smooth' }); else setTab(b.dataset.tab); return; }
@@ -1367,12 +1371,60 @@
   window.Cloud?.onChange(() => { if (tab === 'more' && !wOpen && !stack.length && !overlay.innerHTML) renderMore(); });
 
   let tt;
-  function toast(m) {
+  function toast(m, act) {
     let el = document.querySelector('.toast');
     if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
     el.textContent = m; el.hidden = false; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
-    clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2800);
+    if (act) { const b = document.createElement('button'); b.className = 'toast-act'; b.textContent = act.label; b.addEventListener('click', () => { el.hidden = true; act.fn(); }); el.appendChild(b); }
+    clearTimeout(tt); tt = setTimeout(() => el.hidden = true, act ? 5000 : 2800);
   }
+
+  /* ---------- przesunięcie treningu w lewo = usuń (jak połączenia w telefonie) ---------- */
+  const SWW = 96;
+  let swp = null, swOpen = null, swSuppress = false;
+  function closeSw(c = swOpen) { if (c) { c.style.transform = ''; c.parentElement?.classList.remove('far', 'open'); } if (c === swOpen) swOpen = null; }
+  function deleteWorkout(id) {
+    const w = state.workouts[id]; if (!w) return;
+    delete state.workouts[id];
+    finished().filter(x => x.start > w.start).reverse().forEach(x => { x.prs = computePRs(x); });
+    save(); render();
+    toast(`Usunięto „${w.name}”`, { label: 'Cofnij', fn: () => { state.workouts[w.id] = w; finished().filter(x => x.start >= w.start).reverse().forEach(x => { x.prs = computePRs(x); }); save(); animTab = false; render(); } });
+  }
+  function swipeDelete(c) {
+    const wrap = c.parentElement, id = c.dataset.w; swOpen = null;
+    navigator.vibrate?.(15);
+    if (calm()) { deleteWorkout(id); return; }
+    c.style.transform = 'translateX(-110%)'; wrap.classList.add('far');
+    setTimeout(() => { wrap.style.height = wrap.offsetHeight + 'px'; requestAnimationFrame(() => { wrap.classList.add('gone'); wrap.style.height = '0px'; }); }, 200);
+    setTimeout(() => deleteWorkout(id), 480);
+  }
+  tabView.addEventListener('pointerdown', e => {
+    const c = e.target.closest('.wcard'); if (!c || e.button > 0) return;
+    if (swOpen && swOpen !== c) closeSw();
+    swp = { c, x: e.clientX, y: e.clientY, pid: e.pointerId, dx: 0, base: c === swOpen ? -SWW : 0, active: false };
+  });
+  tabView.addEventListener('pointermove', e => {
+    if (!swp || e.pointerId !== swp.pid) return;
+    const dx = e.clientX - swp.x, dy = e.clientY - swp.y;
+    if (!swp.active) {
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) { swp.active = true; swp.c.classList.add('drag'); try { swp.c.setPointerCapture(e.pointerId); } catch (_) { } }
+      else { if (Math.abs(dy) > 10) swp = null; return; }
+    }
+    const x = Math.min(0, swp.base + dx), w = swp.c.offsetWidth;
+    swp.dx = x; swp.c.style.transform = `translateX(${x}px)`;
+    swp.c.parentElement.classList.toggle('far', x < -w * .5);
+  });
+  const swEnd = e => {
+    if (!swp || (e && e.pointerId !== swp.pid)) return;
+    const { c, active, dx } = swp; swp = null; c.classList.remove('drag');
+    if (!active) return;
+    swSuppress = true; setTimeout(() => { swSuppress = false; }, 60);
+    if (dx < -c.offsetWidth * .5) swipeDelete(c);
+    else if (dx < -60) { c.style.transform = `translateX(-${SWW}px)`; c.parentElement.classList.remove('far'); c.parentElement.classList.add('open'); swOpen = c; }
+    else closeSw(c);
+  };
+  tabView.addEventListener('pointerup', swEnd);
+  tabView.addEventListener('pointercancel', swEnd);
 
   /* ---------- morskie efekty: kręgi na wodzie ---------- */
   function ripple(x, y, k = 1) {
