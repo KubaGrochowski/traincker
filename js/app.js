@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 13;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 14;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -628,7 +628,7 @@
       <div id="sum-list" hidden>${n ? prListHtml(w) : ''}</div>
       <button class="primary acc" data-close>Gotowe</button>`, 'Podsumowanie treningu');
     $('sum-pr')?.addEventListener('click', () => { const l = $('sum-list'), b = $('sum-pr'), open = l.hidden; l.hidden = !open; b.setAttribute('aria-expanded', open); b.classList.toggle('open', open); });
-    celebrate(before < g && after >= g, n);
+    celebrate();
   }
   // plan, z którego był trening, można zaktualizować z menu ⋯ zakończonego treningu
   const routineDiff = (w, r) => r && (r.ex.length !== w.ex.length || r.ex.some((e, i) => e.eid !== w.ex[i].eid || +e.n !== work(w.ex[i].sets).length || +(e.w || 0) !== w.ex[i].sets.filter(x => x.t === 'w').length));
@@ -1374,10 +1374,7 @@
     clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2800);
   }
 
-  /* ---------- morskie efekty: kręgi na wodzie, fala przez cały ekran ---------- */
-  const sea = document.createElement('div');
-  sea.className = 'sea'; sea.setAttribute('aria-hidden', 'true'); sea.innerHTML = SEA_SVG;
-  document.body.appendChild(sea);
+  /* ---------- morskie efekty: kręgi na wodzie ---------- */
   function ripple(x, y, k = 1) {
     if (calm() || (!x && !y)) return;
     [0, 140].forEach(delay => {
@@ -1390,13 +1387,8 @@
       setTimeout(() => r.remove(), 1000);
     });
   }
-  function swell() {
-    if (calm()) return;
-    sea.classList.remove('swell'); void sea.offsetWidth; sea.classList.add('swell');
-    setTimeout(() => sea.classList.remove('swell'), 2700);
-  }
-  // Koniec treningu: fala przez ekran przy rekordzie albo celu tygodnia.
-  function celebrate(goal, prs) { navigator.vibrate?.([15, 60, 25]); if (goal || prs) swell(); }
+  // Koniec treningu: krótka wibracja (bez fali przez ekran).
+  function celebrate() { navigator.vibrate?.([15, 60, 25]); }
   // iPhone: dotknięcie pola czasem nie otwiera klawiatury, więc pole dostaje focus() w obsłudze dotyku.
   let tStart = null;
   document.addEventListener('touchstart', e => { const t = e.touches[0]; tStart = t ? [t.clientX, t.clientY] : null; }, { passive: true });
