@@ -1076,12 +1076,3 @@ p.cnt{font:500 12px var(--f-mono);color:var(--ink-3);padding:0 4px 4px}
 .ra-no:hover{background:var(--surface-3);color:var(--ink)}
 /* „Przerwa?” lekko ponad środkiem ekranu */
 .restask{bottom:auto;top:calc(40vh - 27px);top:calc(40svh - 27px)}
-/* przesunięcie treningu w lewo: czerwone „Usuń” pod kartą */
-.swr{position:relative;border-radius:var(--card);overflow:hidden;transition:height .26s var(--ease),margin .26s var(--ease),opacity .26s}
-.swr.gone{opacity:0;margin-top:-10px}
-.sw-act{position:absolute;inset:0;display:flex;justify-content:flex-end;align-items:stretch;background:var(--miss);border-radius:var(--card)}
-.sw-act button{width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff;font-weight:700;font-size:13px;transition:width .2s var(--ease)}
-.swr.far .sw-act button{width:100%;align-items:flex-end;padding-right:30px}
-.swr .wcard{position:relative;z-index:1;touch-action:pan-y;transition:transform .28s var(--ease),background-color .18s,border-color .18s}
-.swr .wcard.drag{transition:none}
-.toast-act{margin-left:4px;padding:6px 12px;border-radius:999px;background:var(--bg);color:var(--accent);font-weight:700;font-size:13.5px;flex:none}
