@@ -1035,3 +1035,31 @@ p.cnt{font:500 12px var(--f-mono);color:var(--ink-3);padding:0 4px 4px}
 .tpre button.on{background:var(--accent);color:var(--on-acc);border-color:var(--accent)}
 .tpre button{min-width:84px;height:44px;font-size:16px}
 .tctl{margin-top:4px}
+/* po treningu: czas i rekordy; lista rekordów „data / stary › dziś nowy” */
+.sumtiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sumtiles .st{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:16px 8px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);text-align:center}
+.sumtiles small{font-size:12px;color:var(--ink-3)}
+.sumtiles b{font:700 28px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.sumtiles .pr b{color:var(--accent)}
+.sumtiles .pr span{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--accent);font-weight:600}
+.sumtiles .pr span svg{transition:transform .2s}
+.sumtiles .pr.open span svg{transform:rotate(90deg)}
+.sumtiles .pr:not(:disabled):hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.sumtiles .pr:disabled{opacity:.7}
+#sum-list{animation:rise .3s var(--ease)}
+.prlist2{display:flex;flex-direction:column;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.prrow{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.prrow:last-child{border-bottom:0}
+.pr-n{font-weight:600;font-size:15px}
+.pr-d{font-size:12.5px;color:var(--ink-3)}
+.pr-v{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin-top:3px;font:600 15px var(--f-mono)}
+.pr-v .was{color:var(--ink-2)}
+.pr-v i{font-style:normal;color:var(--ink-3)}
+.pr-v .now{color:var(--accent)}
+.pr-v .now em{font:600 12px var(--f-body);font-style:normal;color:var(--accent);opacity:.8}
+.stpr{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;border-left:1px solid var(--line);cursor:pointer}
+.stpr:disabled{cursor:default}
+.stpr small{font-size:11.5px;color:var(--ink-3)}
+.stpr b{font:600 15px var(--f-mono)}
+.stpr b.acc{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.stpr:disabled b.acc{text-decoration:none}

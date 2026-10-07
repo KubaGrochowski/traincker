@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 10;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 11;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -597,18 +597,41 @@
     tab = 'log'; stack = []; render(); window.scrollTo({ top: 0 });
     summary(w, before);
   }
-  function summary(w, before) {
-    const s = wStats(w), g = state.settings.weekGoal, after = weekWorkouts(0).length, r = w.rid && state.routines[w.rid];
-    const diff = r && (r.ex.length !== w.ex.length || r.ex.some((e, i) => e.eid !== w.ex[i].eid || +e.n !== work(w.ex[i].sets).length || +(e.w || 0) !== w.ex[i].sets.filter(x => x.t === 'w').length));
-    overlay.innerHTML = sheet('Trening zakończony', esc(w.name), `
-      <div class="strip"><div><small>Czas</small><b>${fmtDurS(s.ms)}</b></div><div><small>Serie</small><b>${s.sets}</b></div><div><small>Objętość</small><b>${fmtVol(s.vol)} ${U()}</b></div><div><small>Rekordy</small><b class="acc">${w.prs.length}</b></div></div>
-      ${w.prs.length ? `<div class="ilist">${w.prs.map(p => `<div class="irow static"><span class="prs">${STAR}</span><span class="ir-t"><b>${esc(exAny(p.eid).name)}</b><small>${PR_NAME[p.t]}</small></span><span class="ir-v">${prLabel(p)}</span></div>`).join('')}</div>` : ''}
-      ${before < g && after >= g ? `<div class="ai-note"><b>Cel tygodnia osiągnięty:</b> ${after} z ${g} treningów.</div>` : `<p class="hint">To ${after}. trening w tym tygodniu (cel: ${g}).</p>`}
-      ${diff ? `<button class="allweek" id="upd-r" style="align-self:center">Zaktualizuj plan „${esc(r.name)}”</button>` : ''}
-      <button class="primary acc" data-close>Gotowe</button>`, 'Podsumowanie treningu');
-    $('upd-r')?.addEventListener('click', () => { r.ex = w.ex.map(e => ({ eid: e.eid, w: e.sets.filter(x => x.t === 'w').length, n: work(e.sets).length || 1, note: r.ex.find(x => x.eid === e.eid)?.note || '', sup: e.sup || null })); save(); toast('Plan zaktualizowany'); $('upd-r').remove(); });
-    celebrate(before < g && after >= g, w.prs.length);
+  // poprzedni najlepszy wynik (przed tym treningiem) dla danego rodzaju rekordu
+  function prevBest(eid, t, w) {
+    let best = null;
+    sessionsOf(eid, w.id).forEach(({ w: ww, sets }) => {
+      if (ww.start >= w.start) return;
+      work(sets).forEach(x => { const v = t === 'e1rm' ? e1rm(x.kg, x.r) : t === 'kg' ? (x.kg || 0) : t === 'r' ? (x.r || 0) : (x.s || 0); if (!best || v > best.v) best = { v, set: x, at: ww.start }; });
+    });
+    return best;
   }
+  // rekordy w postaci: ćwiczenie, data poprzedniego rekordu, „stary wynik › dziś nowy wynik”
+  function prListHtml(w) {
+    const seen = new Set(), rows = [];
+    (w.prs || []).forEach(p => {
+      const x = exAny(p.eid), k = x.kind, pb = prevBest(p.eid, p.t, w);
+      const now = fmtSet(p.set, k, true), was = pb ? fmtSet(pb.set, k, true) : '—';
+      const id = p.eid + '|' + now + '|' + was; if (seen.has(id)) return; seen.add(id);
+      rows.push(`<div class="prrow"><b class="pr-n">${esc(x.name)}</b><small class="pr-d">${pb ? dateLabel(pb.at) : 'pierwszy raz'}</small><div class="pr-v"><span class="was">${esc(was)}</span><i>›</i><span class="now"><em>dziś</em> ${esc(now)}</span></div></div>`);
+    });
+    return `<div class="prlist2">${rows.join('')}</div>`;
+  }
+  function openPRs(w) {
+    overlay.innerHTML = sheet('Rekordy', `${esc(w.name)} · ${shortDate(w.start)}`, prListHtml(w) + '<button class="primary acc" data-close>Zamknij</button>', 'Rekordy');
+  }
+  // po treningu: tylko czas i liczba rekordów; dotknięcie rekordów rozwija listę
+  function summary(w, before) {
+    const s = wStats(w), g = state.settings.weekGoal, after = weekWorkouts(0).length, n = (w.prs || []).length;
+    overlay.innerHTML = sheet('Trening zakończony', esc(w.name), `
+      <div class="sumtiles"><div class="st"><small>Czas</small><b>${fmtDurS(s.ms)}</b></div><button class="st pr" id="sum-pr" ${n ? '' : 'disabled'} aria-expanded="false"><small>Rekordy</small><b>${n}</b>${n ? `<span>pokaż ${CHEV}</span>` : ''}</button></div>
+      <div id="sum-list" hidden>${n ? prListHtml(w) : ''}</div>
+      <button class="primary acc" data-close>Gotowe</button>`, 'Podsumowanie treningu');
+    $('sum-pr')?.addEventListener('click', () => { const l = $('sum-list'), b = $('sum-pr'), open = l.hidden; l.hidden = !open; b.setAttribute('aria-expanded', open); b.classList.toggle('open', open); });
+    celebrate(before < g && after >= g, n);
+  }
+  // plan, z którego był trening, można zaktualizować z menu ⋯ zakończonego treningu
+  const routineDiff = (w, r) => r && (r.ex.length !== w.ex.length || r.ex.some((e, i) => e.eid !== w.ex[i].eid || +e.n !== work(w.ex[i].sets).length || +(e.w || 0) !== w.ex[i].sets.filter(x => x.t === 'w').length));
 
   /* ----- ekrany szczegółów (nakładane na wierzch, jak w aplikacji na telefon) ----- */
   function pushDetail(d) { stack.push(d); render(); dtLayer.scrollTop = 0; }
@@ -642,14 +665,14 @@
     const body = groupsOf(w.ex).map(([, g]) => { const cards = g.map(e => { const x = exOf(e); return `<section class="hcard"><header><button class="exn" data-exinfo="${e.eid}"><b>${esc(x.name)}</b></button>${e.note ? `<small>${esc(e.note)}</small>` : ''}</header>${histTable(e.sets, x.kind)}${sumStrip(e.sets, x.kind)}</section>`; }).join(''); return g.length > 1 ? `<div class="ssg"><div class="ss-l">Superseria</div>${cards}</div>` : cards; }).join('');
     return `${dtBar(esc(w.name), `<button class="tb-i" data-wmenu="${w.id}" aria-label="Opcje">${DOTSC}</button>`)}<div class="dt-body">
       <div class="eyebrow">${dateLabel(w.start)} · ${hhmm(w.start)}–${hhmm(w.end)}</div><h1 class="big">${esc(w.name)}</h1>
-      <div class="strip"><div><small>Czas</small><b>${fmtDurS(s.ms)}</b></div><div><small>Serie</small><b>${s.sets}</b></div><div><small>Objętość</small><b>${fmtVol(s.vol)} ${U()}</b></div><div><small>Rekordy</small><b class="acc">${w.prs?.length || 0}</b></div></div>
+      <div class="strip"><div><small>Czas</small><b>${fmtDurS(s.ms)}</b></div><div><small>Serie</small><b>${s.sets}</b></div><div><small>Objętość</small><b>${fmtVol(s.vol)} ${U()}</b></div><button class="stpr" data-wprs="${w.id}" ${w.prs?.length ? '' : 'disabled'}><small>Rekordy</small><b class="acc">${w.prs?.length || 0}</b></button></div>
       ${w.note ? `<div class="ai-note">${esc(w.note)}</div>` : ''}
       <button class="primary acc bigbtn" data-repeat="${w.id}">${AGAIN}<span>Powtórz trening</span></button>
       <div class="hlist">${body}</div></div>`;
   }
   function workoutActions(id) {
     const w = state.workouts[id]; if (!w) return;
-    overlay.innerHTML = sheet(esc(w.name), dateLabel(w.start), `<div class="ilist"><button class="irow" data-a="edit"><span class="ir-t"><b>Edytuj trening</b><small>serie, dzień, godzina, czas</small></span>${CHEV}</button><button class="irow" data-a="plan"><span class="ir-t"><b>Zapisz jako plan</b></span></button></div><div class="ilist"><button class="irow out" data-a="del"><span class="ir-t"><b>Usuń trening</b></span></button></div>`, 'Opcje treningu');
+    overlay.innerHTML = sheet(esc(w.name), dateLabel(w.start), `<div class="ilist"><button class="irow" data-a="edit"><span class="ir-t"><b>Edytuj trening</b><small>serie, dzień, godzina, czas</small></span>${CHEV}</button><button class="irow" data-a="plan"><span class="ir-t"><b>Zapisz jako plan</b></span></button>${routineDiff(w, w.rid && state.routines[w.rid]) ? `<button class="irow" data-a="upd"><span class="ir-t"><b>Zaktualizuj plan „${esc(state.routines[w.rid].name)}”</b><small>ćwiczenia i liczba serii jak w tym treningu</small></span></button>` : ''}</div><div class="ilist"><button class="irow out" data-a="del"><span class="ir-t"><b>Usuń trening</b></span></button></div>`, 'Opcje treningu');
     overlay.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => {
       const act = b.dataset.a;
       if (act === 'edit') {
@@ -657,6 +680,7 @@
         state.active = { ...deep(w), edit: w.id }; state.active.ex.forEach(e => { e.tg = []; e.sets.forEach(s => { s.note = s.note || ''; delete s.pr; }); });
         save(); close(); stack = []; openWorkout();
       }
+      if (act === 'upd') { const r = state.routines[w.rid]; r.ex = w.ex.map(e => ({ eid: e.eid, w: e.sets.filter(x => x.t === 'w').length, n: work(e.sets).length || 1, note: r.ex.find(x => x.eid === e.eid)?.note || '', sup: e.sup || null })); save(); close(); toast('Plan zaktualizowany'); return; }
       if (act === 'plan') { const r = { id: uid('r'), name: w.name, created: Date.now(), note: '', target: 'latest', ex: w.ex.map(e => ({ eid: e.eid, w: e.sets.filter(x => x.t === 'w').length, n: work(e.sets).length || 1, note: '', sup: e.sup || null })) }; state.routines[r.id] = r; save(); close(); toast(`Zapisano plan „${r.name}”`); tab = 'routines'; stack = [{ type: 'r', id: r.id }]; render(); }
       if (act === 'del') {
         overlay.innerHTML = sheet('Usunąć trening?', esc(w.name), `<div class="confirm"><button data-close>Anuluj</button><button class="yes" id="cd-yes">Usuń</button></div>`);
@@ -1248,6 +1272,7 @@
     // listy i szczegóły
     if ((b = T('[data-w]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1); pushDetail({ type: 'w', id: b.dataset.w }); return; }
     if ((b = T('[data-wmenu]'))) { workoutActions(b.dataset.wmenu); return; }
+    if ((b = T('[data-wprs]'))) { const w = state.workouts[b.dataset.wprs]; if (w?.prs?.length) openPRs(w); return; }
     if ((b = T('[data-repeat]'))) { const w = state.workouts[b.dataset.repeat]; if (w) startWorkout({ name: w.name, rid: w.rid, ex: w.ex.map(e => ({ eid: e.eid, sup: e.sup, note: e.note, tg: e.sets })) }); return; }
     if ((b = T('[data-r]'))) { pushDetail({ type: 'r', id: b.dataset.r }); return; }
     if (T('[data-rnew]')) { newRoutine(); return; }
