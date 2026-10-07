@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 11;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 12;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -534,7 +534,7 @@
   function tidySup(list = state.active.ex) { list.forEach((e, i) => { if (e.sup && list[i - 1]?.sup !== e.sup && list[i + 1]?.sup !== e.sup) e.sup = null; }); }
   function addSet(xi) {
     const a = state.active, e0 = a.ex[xi], grp = e0.sup ? a.ex.filter(x => x.sup === e0.sup) : [e0];
-    grp.forEach(e => { const l = e.sets[e.sets.length - 1]; e.sets.push({ t: l && l.t !== 'w' ? l.t : 'n', kg: null, r: null, s: null, km: null, kcal: null, note: '' }); });
+    grp.forEach(e => { const li = e.sets.length - 1, l = e.sets[li], src = l ? (l.kg != null ? l : target(e, li)) : null; e.sets.push({ t: l && l.t !== 'w' ? l.t : 'n', kg: exOf(e).kind !== 'cardio' && src?.kg != null ? src.kg : null, r: null, s: null, km: null, kcal: null, note: '' }); });
     save(); render();
     const row = wkLayer.querySelector(`.srow[data-x="${xi}"][data-s="${e0.sets.length - 1}"]`);
     if (row && !calm()) row.animate({ opacity: [0, 1], transform: ['translateY(-8px)', 'none'] }, { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
@@ -1325,6 +1325,10 @@
     const row = t.closest('.srow'); if (!row || !t.dataset.f) return;
     const en = a.ex[+row.dataset.x], s = en?.sets[+row.dataset.s]; if (!s) return;
     if (t.dataset.f === 'note') s.note = t.value; else putVal(s, t.dataset.f, num(t.value), exOf(en).kind);
+    if ((t.dataset.f === 'r' || t.dataset.f === 's') && t.value !== '' && s.kg == null && exOf(en).kind !== 'cardio') {
+      const tg = target(en, +row.dataset.s), kgIn = row.querySelector('[data-f="kg"]');
+      if (tg?.kg != null && kgIn) { s.kg = tg.kg; kgIn.value = inVal(s, 'kg', exOf(en).kind); if (!calm()) kgIn.animate({ color: ['var(--accent)', 'var(--ink)'] }, { duration: 700 }); }
+    }
     save();
     const st = $('w-stats'); if (st) st.innerHTML = statChips(wStats(a, true));
     row.classList.toggle('ok', valid(s, exOf(en).kind));
