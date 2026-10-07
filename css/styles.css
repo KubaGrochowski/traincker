@@ -1063,3 +1063,15 @@ p.cnt{font:500 12px var(--f-mono);color:var(--ink-3);padding:0 4px 4px}
 .stpr b{font:600 15px var(--f-mono)}
 .stpr b.acc{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 .stpr:disabled b.acc{text-decoration:none}
+/* „Przerwa?” — wysuwane z boku po wpisaniu serii */
+.restask{position:fixed;z-index:47;right:max(12px,calc(50vw - 300px + 12px));bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-radius:999px;background:rgba(20,20,20,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--accent) 45%,rgba(255,255,255,.1));box-shadow:0 12px 30px rgba(0,0,0,.6);animation:ask-in .32s var(--ease)}
+.restask.out{animation:ask-out .26s ease-in forwards}
+@keyframes ask-in{from{transform:translateX(calc(100% + 24px));opacity:0}}
+@keyframes ask-out{to{transform:translateX(calc(100% + 24px));opacity:0}}
+.ra-q{display:inline-flex;align-items:center;gap:7px;color:var(--accent)}
+.ra-q svg{width:20px;height:20px}
+.ra-q b{color:var(--ink);font-weight:700;font-size:15.5px}
+.ra-yes{height:38px;padding:0 16px;border-radius:999px;background:var(--accent);color:var(--on-acc);font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
+.ra-no{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--ink-3)}
+.ra-no:hover{background:var(--surface-3);color:var(--ink)}
+body:has(.restask) .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}

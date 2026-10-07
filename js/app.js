@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 12;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 13;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -347,7 +347,7 @@
     document.querySelectorAll('#tabbar [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
     renderTab();
     renderLive();
-    if (wOpen && state.active) { wkLayer.hidden = false; renderWorkout(); } else { wkLayer.hidden = true; wkLayer.innerHTML = ''; wOpen = false; }
+    if (wOpen && state.active) { wkLayer.hidden = false; renderWorkout(); } else { wkLayer.hidden = true; wkLayer.innerHTML = ''; wOpen = false; hideAsk(true); }
     if (stack.length) { dtLayer.hidden = false; renderDetail(); } else { dtLayer.hidden = true; dtLayer.innerHTML = ''; }
     document.body.classList.toggle('locked', wOpen || !!stack.length);
     animTab = false;
@@ -448,7 +448,7 @@
     if (!calm()) { row.querySelector('.sn').animate({ transform: ['scale(.7)', 'scale(1.15)', 'scale(1)'] }, { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }); const r = row.querySelector('.sn').getBoundingClientRect(); ripple(r.left + r.width / 2, r.top + r.height / 2, .9); }
     if (pr) toast(`Nowy rekord (${PR_NAME[pr]}): ${exOf(e).name} · ${fmtSet(e.sets[+row.dataset.s], k, true)}`);
     const next = a.ex[xi + 1], inSup = e.sup && next && next.sup === e.sup;
-    if (!a.edit && state.settings.autoRest && !inSup && k !== 'cardio' && restOf(e) > 0) startRest(restOf(e), true);
+    if (!a.edit && state.settings.autoRest && !inSup && k !== 'cardio' && restOf(e) > 0) askRest(restOf(e));
   }
   // nowe ćwiczenie w treningu: serie z ostatniego razu jako szare podpowiedzi (jak w RepCount)
   function newEntry(eid, opt = {}) {
@@ -1076,7 +1076,7 @@
       <div class="ilist">
         <div class="irow static"><span class="ir-t"><b>Jednostka</b></span><span class="smode u2"><button data-unit="kg" class="${s.unit !== 'lb' ? 'on' : ''}">kg</button><button data-unit="lb" class="${s.unit === 'lb' ? 'on' : ''}">lb</button></span></div>
         <div class="irow static"><span class="ir-t"><b>Przerwa między seriami</b><small>domyślna, można zmienić dla ćwiczenia</small></span><span class="smode u3">${REST_OPTS.map(o => `<button data-rest-set="${o}" class="${s.rest === o ? 'on' : ''}">${fmtSec(o)}</button>`).join('')}</span></div>
-        <div class="irow static"><span class="ir-t"><b>Timer po każdej serii</b><small>przerwa startuje sama po wpisaniu serii</small></span>${tog('autoRest', s.autoRest)}</div>
+        <div class="irow static"><span class="ir-t"><b>Pytaj o przerwę po serii</b><small>po wpisaniu serii z boku pojawi się „Przerwa?”</small></span>${tog('autoRest', s.autoRest)}</div>
         <div class="irow static"><span class="ir-t"><b>Dźwięk na koniec przerwy</b></span>${tog('sound', s.sound)}</div>
         ${perm !== 'unsupported' ? `<button class="irow" data-notif ${perm !== 'default' ? 'disabled' : ''}><span class="ir-t"><b>Powiadomienie o końcu przerwy</b><small>${perm === 'granted' ? 'włączone' : perm === 'denied' ? 'zablokowane w przeglądarce' : 'gdy aplikacja jest w tle'}</small></span>${perm === 'default' ? '<span class="ir-v acc">Włącz</span>' : ''}</button>` : ''}
         <div class="irow static"><span class="ir-t"><b>Cel: treningów w tygodniu</b></span><span class="stp"><button data-goal-d="-1" aria-label="Mniej">−</button><b>${s.weekGoal}</b><button data-goal-d="1" aria-label="Więcej">+</button></span></div>
@@ -1119,7 +1119,23 @@
     else document.querySelectorAll('.tb-timer').forEach(b => { b.classList.add('run'); if (!calm()) b.animate({ transform: ['scale(1)', 'scale(1.12)', 'scale(1)'] }, { duration: 400 }); });
     renderLive();
   }
-  function stopRest() { rest = null; try { localStorage.removeItem(REST_KEY); } catch (_) { } clearInterval(restInt); restInt = null; document.querySelectorAll('.tb-timer').forEach(b => { b.classList.remove('run'); b.querySelector('[data-rl]').textContent = ''; }); if ($('t-ring')) drawTimer(); renderLive(); }
+  // wysuwane z boku pytanie „Przerwa?” — „Tak” włącza timer ustawiony wcześniej (Więcej → Przerwa między seriami)
+  let askT = null;
+  function askRest(sec) {
+    hideAsk(true);
+    const el = document.createElement('div');
+    el.className = 'restask'; el.id = 'restask'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Przerwa?');
+    el.innerHTML = `<span class="ra-q">${ALARM}<b>Przerwa?</b></span><button class="ra-yes" data-rest-yes="${sec}">Tak · ${fmtSec(sec)}</button><button class="ra-no" data-rest-no aria-label="Nie">${XMARK}</button>`;
+    document.body.appendChild(el);
+    clearTimeout(askT); askT = setTimeout(() => hideAsk(), 9000);
+  }
+  function hideAsk(now) {
+    clearTimeout(askT);
+    const el = $('restask'); if (!el) return;
+    if (now || calm()) { el.remove(); return; }
+    el.classList.add('out'); setTimeout(() => el.remove(), 260);
+  }
+  function stopRest() { hideAsk(true); rest = null; try { localStorage.removeItem(REST_KEY); } catch (_) { } clearInterval(restInt); restInt = null; document.querySelectorAll('.tb-timer').forEach(b => { b.classList.remove('run'); b.querySelector('[data-rl]').textContent = ''; }); if ($('t-ring')) drawTimer(); renderLive(); }
   function tickRest() {
     if (!rest) return;
     const left = restLeft();
@@ -1255,6 +1271,8 @@
     // zakładki i główne przyciski
     if ((b = T('#tabbar [data-tab]'))) { if (b.dataset.tab === tab && !stack.length) window.scrollTo({ top: 0, behavior: 'smooth' }); else setTab(b.dataset.tab); return; }
     if (T('#fab') || T('[data-start]')) { if (!calm()) ripple(e.clientX, e.clientY, 1.2); openStart(); return; }
+    if ((b = T('[data-rest-yes]'))) { unlockAudio(); startRest(+b.dataset.restYes, true); hideAsk(); return; }
+    if (T('[data-rest-no]')) { hideAsk(); return; }
     if (T('#livebar')) { openWorkout(); return; }
     if (T('[data-back]')) { popDetail(); return; }
     // ekran treningu
