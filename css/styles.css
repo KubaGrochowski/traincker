@@ -1029,3 +1029,9 @@ p.cnt{font:500 12px var(--f-mono);color:var(--ink-3);padding:0 4px 4px}
 .tb-rt{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none}
 .tb-rt .tb-g{margin-left:0}
 .tb-el{font:600 13px var(--f-mono);color:var(--ink-2);font-variant-numeric:tabular-nums;line-height:1}
+/* zegar przerwy: tylko 1:00 / 2:00 / 3:00 */
+.smode.u3{display:inline-grid;grid-template-columns:repeat(3,1fr);flex:none}
+.smode.u3 button{padding:0 10px;font:600 13px var(--f-mono)}
+.tpre button.on{background:var(--accent);color:var(--on-acc);border-color:var(--accent)}
+.tpre button{min-width:84px;height:44px;font-size:16px}
+.tctl{margin-top:4px}

@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 9;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 10;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -77,11 +77,14 @@
   const defaultName = ms => { const h = new Date(ms).getHours(); return h < 12 ? 'Poranny trening' : h < 18 ? 'Popołudniowy trening' : 'Wieczorny trening'; };
 
   /* ---------- stan ---------- */
-  const DEF_SET = { unit: 'kg', rest: 90, autoRest: true, weekGoal: 3, sound: true };
+  const REST_OPTS = [60, 120, 180];
+  const snapRest = v => !v ? 0 : REST_OPTS.reduce((b, o) => Math.abs(o - v) <= Math.abs(b - v) ? o : b, REST_OPTS[0]);
+  const DEF_SET = { unit: 'kg', rest: 120, autoRest: true, weekGoal: 3, sound: true };
   let migrated = false;
   const withDefaults = s => {
     s = s && typeof s === 'object' ? s : {};
     s.settings = { ...DEF_SET, ...(s.settings || {}) };
+    if (!REST_OPTS.includes(s.settings.rest)) s.settings.rest = snapRest(s.settings.rest) || 120;
     ['workouts', 'routines', 'exercises', 'body'].forEach(c => { if (!s[c] || typeof s[c] !== 'object') s[c] = {}; });
     // plany z poprzedniej wersji: {n, reps} → {w, n, note}
     Object.values(s.routines).forEach(r => { (r.ex || []).forEach(e => { if (e.w == null) e.w = 0; if (e.reps != null) { if (!e.note && e.reps) e.note = /s$/.test(e.reps) ? e.reps : e.reps + ' powt.'; delete e.reps; } }); if (!r.target) r.target = 'latest'; });
@@ -389,7 +392,7 @@
 
   /* ----- Trening (ekran treningu jak w RepCount) ----- */
   const setLabel = (sets, i, pre = '') => { const s = sets[i]; if (s.t === 'w') return 'R'; return pre + work(sets.slice(0, i + 1)).length; };
-  const restOf = e => e.rest ?? state.settings.rest;
+  const restOf = e => e.rest != null ? snapRest(e.rest) : state.settings.rest;
   // podpowiedź (szara wartość docelowa): z ostatniego razu, a dla dodatkowych serii — z poprzedniej serii
   function target(e, si) {
     const t = e.tg?.[si]; if (t) return t;
@@ -496,7 +499,7 @@
   }
   function exMenu(xi) {
     const a = state.active, e = a.ex[xi], x = exOf(e), next = a.ex[xi + 1];
-    const rests = [0, 30, 60, 90, 120, 150, 180, 240, 300];
+    const rests = [0, ...REST_OPTS];
     overlay.innerHTML = sheet(esc(x.name), esc(exSub(x)), `
       ${x.kind !== 'cardio' ? `<div class="field"><span class="lab">Przerwa po serii</span><div class="chips rchips">${rests.map(r => `<button class="${restOf(e) === r ? 'on' : ''}" data-rest-sec="${r}">${r ? fmtSec(r) : 'brak'}</button>`).join('')}</div></div>` : ''}
       <div class="ilist">
@@ -1048,7 +1051,7 @@
       <div class="grp"><h3>Trening</h3></div>
       <div class="ilist">
         <div class="irow static"><span class="ir-t"><b>Jednostka</b></span><span class="smode u2"><button data-unit="kg" class="${s.unit !== 'lb' ? 'on' : ''}">kg</button><button data-unit="lb" class="${s.unit === 'lb' ? 'on' : ''}">lb</button></span></div>
-        <div class="irow static"><span class="ir-t"><b>Przerwa między seriami</b><small>domyślna, można zmienić dla ćwiczenia</small></span><span class="stp"><button data-rest-d="-15" aria-label="Krócej">−</button><b>${s.rest ? fmtSec(s.rest) : 'brak'}</b><button data-rest-d="15" aria-label="Dłużej">+</button></span></div>
+        <div class="irow static"><span class="ir-t"><b>Przerwa między seriami</b><small>domyślna, można zmienić dla ćwiczenia</small></span><span class="smode u3">${REST_OPTS.map(o => `<button data-rest-set="${o}" class="${s.rest === o ? 'on' : ''}">${fmtSec(o)}</button>`).join('')}</span></div>
         <div class="irow static"><span class="ir-t"><b>Timer po każdej serii</b><small>przerwa startuje sama po wpisaniu serii</small></span>${tog('autoRest', s.autoRest)}</div>
         <div class="irow static"><span class="ir-t"><b>Dźwięk na koniec przerwy</b></span>${tog('sound', s.sound)}</div>
         ${perm !== 'unsupported' ? `<button class="irow" data-notif ${perm !== 'default' ? 'disabled' : ''}><span class="ir-t"><b>Powiadomienie o końcu przerwy</b><small>${perm === 'granted' ? 'włączone' : perm === 'denied' ? 'zablokowane w przeglądarce' : 'gdy aplikacja jest w tle'}</small></span>${perm === 'default' ? '<span class="ir-v acc">Włącz</span>' : ''}</button>` : ''}
@@ -1104,9 +1107,10 @@
     const was = rest; rest = null; try { localStorage.removeItem(REST_KEY); } catch (_) { }
     clearInterval(restInt); restInt = null;
     if (!was) return;
-    navigator.vibrate?.([200, 100, 200]);
+    const buzz = [500, 200, 500, 200, 700];
+    const vibrated = !!navigator.vibrate?.(buzz);
     if (state.settings.sound) beep();
-    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') navigator.serviceWorker?.getRegistration().then(r => r?.showNotification('Koniec przerwy', { body: 'Czas na kolejną serię', tag: 'ggym-rest', icon: 'icons/icon-192.png' })).catch(() => { });
+    if ((document.hidden || !vibrated) && 'Notification' in window && Notification.permission === 'granted') navigator.serviceWorker?.getRegistration().then(r => r?.showNotification('Koniec przerwy', { body: 'Czas na kolejną serię', tag: 'ggym-rest', renotify: true, vibrate: buzz, icon: 'icons/icon-192.png' })).catch(() => { });
     document.querySelectorAll('[data-rl]').forEach(el => { el.textContent = ''; });
     document.querySelectorAll('.tb-timer').forEach(b => { b.classList.remove('run'); b.classList.add('end'); setTimeout(() => b.classList.remove('end'), 2000); });
     if ($('t-ring')) { drawTimer(); $('t-ring').classList.add('end'); }
@@ -1119,9 +1123,10 @@
   }
   function drawTimer() {
     const box = $('t-box'); if (!box) return;
-    const presets = [30, 60, 90, 120, 180, 300];
+    const presets = REST_OPTS, cur = rest ? rest.total : 0;
     box.innerHTML = `<div class="tring" id="t-ring" style="--p:${rest ? (restLeft() / rest.total).toFixed(4) : 0}"><svg viewBox="0 0 220 220" aria-hidden="true"><circle class="bg" cx="110" cy="110" r="96"/><circle class="fg" cx="110" cy="110" r="96" pathLength="1"/></svg><b id="t-left">${rest ? fmtSec(Math.ceil(restLeft())) : '0:00'}</b></div>
-      ${rest ? `<div class="tctl"><button data-tadj="-15">−15s</button><button class="tstop" data-tstop aria-label="Zatrzymaj">${STOP}</button><button data-tadj="15">+15s</button></div>` : `<div class="chips tpre">${presets.map(p => `<button data-tgo="${p}">${fmtSec(p)}</button>`).join('')}</div>`}`;
+      <div class="chips tpre">${presets.map(p => `<button data-tgo="${p}" class="${cur === p ? 'on' : ''}">${fmtSec(p)}</button>`).join('')}</div>
+      ${rest ? `<div class="tctl"><button class="tstop" data-tstop aria-label="Zatrzymaj">${STOP}</button></div>` : '<p class="hint">Wybierz czas przerwy</p>'}`;
   }
   function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (_) { } }
   function beep() {
@@ -1272,7 +1277,7 @@
     if (T('[data-body]')) { openBody(); return; }
     // ustawienia
     if ((b = T('[data-unit]'))) { state.settings.unit = b.dataset.unit; save(); render(); return; }
-    if ((b = T('[data-rest-d]'))) { state.settings.rest = Math.max(0, Math.min(600, state.settings.rest + +b.dataset.restD)); save(); render(); return; }
+    if ((b = T('[data-rest-set]'))) { state.settings.rest = +b.dataset.restSet; save(); render(); return; }
     if ((b = T('[data-goal-d]'))) { state.settings.weekGoal = Math.max(1, Math.min(7, state.settings.weekGoal + +b.dataset.goalD)); save(); prevRing = null; render(); return; }
     if (T('[data-notif]')) { Notification.requestPermission().then(r => { toast(r === 'granted' ? 'Powiadomienia włączone' : 'Powiadomienia nie zostały włączone'); render(); }).catch(() => { }); return; }
     if (T('[data-csv]')) { exportCsv(); return; }
