@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 8;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 9;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -420,8 +420,8 @@
   function renderWorkout() {
     const a = state.active, sy = wkLayer.scrollTop, s = wStats(a, true), d = new Date(a.start);
     const fresh = !wkLayer.querySelector('.wk-body');
-    const bar = `<div class="topbar"><button class="tb-i" data-wk-min aria-label="${a.edit ? 'Anuluj edycję' : 'Zwiń trening'}">${a.edit ? XMARK : DOWN}</button><button class="fin" data-finish>${a.edit ? 'Zapisz' : 'Zakończ'}</button><div class="tb-d"><b>${d.getDate()} ${MON_S[d.getMonth()]}</b><small>${a.edit ? 'edycja' : `<span data-el>${elapsed()}</span>`}</small></div><div class="tb-g"><button class="tb-timer${rest ? ' run' : ''}" data-timer aria-label="Timer przerwy">${ALARM}<span data-rl>${rest ? fmtSec(restLeft()) : ''}</span></button><button data-wk-menu aria-label="Opcje treningu">${DOTSC}</button></div></div>`;
-    const body = `<div class="wk-head"><div class="eyebrow">${DAYS_FULL[dow(d)]} · ${hhmm(a.start)}</div><input class="wname" id="w-name" type="text" maxlength="60" value="${esc(a.name)}" aria-label="Nazwa treningu" autocomplete="off"><div class="wstats" id="w-stats">${statChips(s)}</div>${a.note ? `<p class="wnote" data-wk-menu>${esc(a.note)}</p>` : ''}</div>
+    const bar = `<div class="topbar wkbar"><button class="tb-i" data-wk-min aria-label="${a.edit ? 'Anuluj edycję' : 'Zwiń trening'}">${a.edit ? XMARK : DOWN}</button><div class="tb-mid"><button class="fin" data-finish>${a.edit ? 'Zapisz' : 'Zakończ'}</button></div><div class="tb-rt"><div class="tb-g"><button class="tb-timer${rest ? ' run' : ''}" data-timer aria-label="Timer przerwy">${ALARM}<span data-rl>${rest ? fmtSec(restLeft()) : ''}</span></button><button data-wk-menu aria-label="Opcje treningu">${DOTSC}</button></div><small class="tb-el">${a.edit ? 'edycja' : `<span data-el>${elapsed()}</span>`}</small></div></div>`;
+    const body = `<div class="wk-head"><div class="eyebrow">${DAYS_FULL[dow(d)]} · ${hhmm(a.start)}</div><input class="wname" id="w-name" type="text" maxlength="60" value="${esc(a.name)}" aria-label="Nazwa treningu" autocomplete="off">${a.note ? `<p class="wnote" data-wk-menu>${esc(a.note)}</p>` : ''}</div>
       <div class="exlist${fresh ? ' enter' : ''}">${groupsOf(a.ex).map(([i, g]) => exCard(g, i)).join('') || emptyCard('Pusty trening', 'Dodaj pierwsze ćwiczenie. Szare liczby w seriach to wynik z ostatniego razu — dotknij numeru serii, żeby go wpisać.')}</div>
       <button class="addex" data-addex>${PLUSC}<span>Dodaj ćwiczenie</span></button>`;
     wkLayer.innerHTML = `${bar}<div class="wk-body">${body}</div>`;
