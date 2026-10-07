@@ -1074,4 +1074,5 @@ p.cnt{font:500 12px var(--f-mono);color:var(--ink-3);padding:0 4px 4px}
 .ra-yes{height:38px;padding:0 16px;border-radius:999px;background:var(--accent);color:var(--on-acc);font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
 .ra-no{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--ink-3)}
 .ra-no:hover{background:var(--surface-3);color:var(--ink)}
-body:has(.restask) .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+/* „Przerwa?” lekko ponad środkiem ekranu */
+.restask{bottom:auto;top:calc(40vh - 27px);top:calc(40svh - 27px)}

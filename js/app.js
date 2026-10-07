@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 14;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 15;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
