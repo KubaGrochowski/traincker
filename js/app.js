@@ -4,7 +4,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 18;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 19;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -799,6 +799,14 @@
     if (mode === 'workout') pick.cb = (ids, ss) => addToWorkout(ids, ss);
     drawPicker();
   }
+  // świeżo dodane ćwiczenia: przewinięcie do nich i krótkie podświetlenie
+  function showAdded(rows, n) {
+    const add = [...rows].slice(-n); if (!add.length) return;
+    setTimeout(() => {
+      add[0].scrollIntoView({ behavior: calm() ? 'auto' : 'smooth', block: 'center' });
+      if (!calm()) add.forEach(r => r.animate({ backgroundColor: ['color-mix(in srgb, var(--accent) 22%, transparent)', 'transparent'] }, { duration: 1600, easing: 'ease-out' }));
+    }, 60);
+  }
   function addToWorkout(ids, ss) {
     const a = state.active; if (!a) return;
     const sup = ss && ids.length > 1 ? uid('s') : null;
@@ -818,7 +826,7 @@
     drawPickList();
     $('p-q').addEventListener('input', e => { p.q = e.target.value; drawPickList(); });
     $('p-ss')?.addEventListener('change', e => { p.ss = e.target.checked; drawPickFoot(); });
-    $('p-new').addEventListener('click', () => openCustomEx(null, x => { p.sel.push(x.id); p.q = ''; if (p.mode === 'swap') { p.cb([x.id]); return; } drawPicker(); }, () => drawPicker()));
+    $('p-new').addEventListener('click', () => openCustomEx(null, x => { if (p.mode === 'swap') { pick = null; p.cb([x.id]); return; } const sel = [...p.sel.filter(id => id !== x.id), x.id]; pick = null; p.cb(sel, p.ss); }, () => drawPicker())); // nowe ćwiczenie od razu trafia do planu / treningu
   }
   function drawPickList() { const p = pick, list = $('p-list'); if (!list) return; list.innerHTML = exListHtml(exFiltered(p.q, p.mus, p.eq), exUse(), { pick: true, sel: p.sel, grouped: !p.q.trim() && p.mus === 'all' && p.eq === 'all' }); drawPickFoot(); }
   function drawPickFoot() {
@@ -1297,7 +1305,7 @@
     if ((b = T('[data-rstart]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1.6); startRoutine(b.dataset.rstart); return; }
     if ((b = T('[data-rmenu]'))) { routineMenu(b.dataset.rmenu); return; }
     if ((b = T('[data-rex]'))) { routineEx(stack[stack.length - 1].id, +b.dataset.rex); return; }
-    if (T('[data-radd]')) { const r = state.routines[stack[stack.length - 1].id]; openPicker('routine', (ids, ss) => { const sup = ss && ids.length > 1 ? uid('s') : null; ids.forEach(id => r.ex.push({ eid: id, w: 0, n: 3, note: '', sup })); save(); close(); render(); }); return; }
+    if (T('[data-radd]')) { const r = state.routines[stack[stack.length - 1].id]; openPicker('routine', (ids, ss) => { const sup = ss && ids.length > 1 ? uid('s') : null; ids.forEach(id => r.ex.push({ eid: id, w: 0, n: 3, note: '', sup })); save(); close(); render(); showAdded(dtLayer.querySelectorAll('[data-rex]'), ids.length); }); return; }
     if (T('[data-rtarget]')) {
       const r = state.routines[stack[stack.length - 1].id];
       overlay.innerHTML = sheet('Ciężary i powtórzenia', 'Skąd brać szare podpowiedzi w seriach', `<div class="ilist"><button class="irow${r.target !== 'routine' ? ' on' : ''}" data-tv="latest"><span class="ir-t"><b>Ostatnie</b><small>z ostatniego razu, gdy robiłeś to ćwiczenie</small></span>${r.target !== 'routine' ? '<span class="ck">✓</span>' : ''}</button><button class="irow${r.target === 'routine' ? ' on' : ''}" data-tv="routine"><span class="ir-t"><b>Z tego planu</b><small>z ostatniego treningu z tego planu (np. dzień ciężki i lekki)</small></span>${r.target === 'routine' ? '<span class="ck">✓</span>' : ''}</button></div>`, 'Podpowiedzi');
