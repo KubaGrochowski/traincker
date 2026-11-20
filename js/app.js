@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 26;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 27;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -436,7 +436,7 @@
   function logged(e, xi, row, pr) {
     const a = state.active, k = exOf(e).kind;
     navigator.vibrate?.(12);
-    if (!calm()) { row.querySelector('.sn').animate({ transform: ['scale(.9)', 'scale(1)'] }, { duration: 200, easing: 'ease-out' }); const r = row.querySelector('.sn').getBoundingClientRect(); ripple(r.left + r.width / 2, r.top + r.height / 2, .9); }
+    if (!calm()) { row.querySelector('.sn').animate({ transform: ['scale(.7)', 'scale(1.15)', 'scale(1)'] }, { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }); const r = row.querySelector('.sn').getBoundingClientRect(); ripple(r.left + r.width / 2, r.top + r.height / 2, .9); }
     if (pr) toast(`Nowy rekord (${PR_NAME[pr]}): ${exOf(e).name} · ${fmtSet(e.sets[+row.dataset.s], k, true)}`);
     const next = a.ex[xi + 1], inSup = e.sup && next && next.sup === e.sup;
     if (!a.edit && state.settings.autoRest && !inSup && k !== 'cardio' && restOf(e) > 0) askRest(restOf(e));
@@ -527,7 +527,7 @@
     grp.forEach(e => { const li = e.sets.length - 1, l = e.sets[li], src = l ? (l.kg != null ? l : target(e, li)) : null; e.sets.push({ t: l && l.t !== 'w' ? l.t : 'n', kg: exOf(e).kind !== 'cardio' && src?.kg != null ? src.kg : null, r: null, s: null, km: null, kcal: null, note: '' }); });
     save(); render();
     const row = wkLayer.querySelector(`.srow[data-x="${xi}"][data-s="${e0.sets.length - 1}"]`);
-    if (row && !calm()) row.animate({ opacity: [0, 1], transform: ['translateY(-4px)', 'none'] }, { duration: 200, easing: 'ease-out' });
+    if (row && !calm()) row.animate({ opacity: [0, 1], transform: ['translateY(-8px)', 'none'] }, { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
   }
   // dotknięcie numeru serii: wpisuje podpowiedź z ostatniego razu (szybkie „zrobione jak ostatnio”)
   function tapSet(row) {
@@ -830,7 +830,7 @@
     const add = [...rows].slice(-n); if (!add.length) return;
     setTimeout(() => {
       add[0].scrollIntoView({ behavior: calm() ? 'auto' : 'smooth', block: 'center' });
-      if (!calm()) add.forEach(r => r.animate({ opacity: [.4, 1] }, { duration: 250, easing: 'ease-out' }));
+      if (!calm()) add.forEach(r => r.animate({ backgroundColor: ['color-mix(in srgb, var(--accent) 22%, transparent)', 'transparent'] }, { duration: 1600, easing: 'ease-out' }));
     }, 60);
   }
   function addToWorkout(ids, ss) {
@@ -1059,7 +1059,8 @@
         <section class="scard${animTab ? ' enter' : ''}" style="--i:2"><header><div><h3>Mięśnie</h3><small>ostatnie 8 tygodni</small></div></header>
           ${musL.length ? `<div class="mm heatmap">${bodyMap([], [], heat)}</div>` : '<p class="empty" style="padding:16px">Brak treningów w tym okresie</p>'}</section>
       </div>`;
-    // poziom wody bez animacji (motyw: animujemy tylko opacity i transform)
+    const ringEl = tabView.querySelector('.ring');
+    if (ringEl && !calm() && prevRing !== lv) { const top = l => `calc(4% + ${(100 - l) * .96}%)`, from = prevRing ?? 0; ringEl.querySelectorAll('.wv').forEach(w => w.animate({ top: [top(from), top(lv)] }, { duration: 1300, easing: 'cubic-bezier(.3,.7,.3,1)' })); }
     prevRing = lv;
   }
   function openGoal() {
@@ -1125,7 +1126,7 @@
     try { localStorage.setItem(REST_KEY, JSON.stringify(rest)); } catch (_) { }
     unlockAudio(); clearInterval(restInt); restInt = setInterval(tickRest, 250); tickRest();
     if (!auto) openTimer();
-    else document.querySelectorAll('.tb-timer').forEach(b => { b.classList.add('run'); if (!calm()) b.animate({ transform: ['scale(1.08)', 'scale(1)'] }, { duration: 200, easing: 'ease-out' }); });
+    else document.querySelectorAll('.tb-timer').forEach(b => { b.classList.add('run'); if (!calm()) b.animate({ transform: ['scale(1)', 'scale(1.12)', 'scale(1)'] }, { duration: 400 }); });
     renderLive();
   }
   // wysuwane z boku pytanie „Przerwa?” — „Tak” włącza timer ustawiony wcześniej (Więcej → Przerwa między seriami)
@@ -1348,7 +1349,7 @@
     if (t.dataset.f === 'note') s.note = t.value; else putVal(s, t.dataset.f, num(t.value), exOf(en).kind);
     if ((t.dataset.f === 'r' || t.dataset.f === 's') && t.value !== '' && s.kg == null && exOf(en).kind !== 'cardio') {
       const tg = target(en, +row.dataset.s), kgIn = row.querySelector('[data-f="kg"]');
-      if (tg?.kg != null && kgIn) { s.kg = tg.kg; kgIn.value = inVal(s, 'kg', exOf(en).kind); if (!calm()) kgIn.animate({ opacity: [.5, 1] }, { duration: 200, easing: 'ease-out' }); }
+      if (tg?.kg != null && kgIn) { s.kg = tg.kg; kgIn.value = inVal(s, 'kg', exOf(en).kind); if (!calm()) kgIn.animate({ color: ['var(--accent)', 'var(--ink)'] }, { duration: 700 }); }
     }
     save();
     const st = $('w-stats'); if (st) st.innerHTML = statChips(wStats(a, true));

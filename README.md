@@ -1,6 +1,6 @@
 # Traincker
 
-Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Motyw „Bordeaux”: tło #1B1416, karty #261C1F, tekst #F2E6D8 / #A8958A, akcent #8E2A3B, nagłówki Fraunces, tekst i liczby Inter; płasko (bez gradientów i cieni, zaokrąglenia 8px), krótkie animacje 150–250 ms.
+Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Żółto-grafitowy wygląd: akcent żółty jak w logo, tło grafitowe (#232427), nagłówki Fraunces, tekst i liczby Inter.
 Adres: https://kubagrochowski.github.io/traincker/
 
 Na komputerze aplikacja wyświetla się w ramce iPhone’a 13 (390 × 844 pkt, zmniejsza się w niskim oknie).
@@ -21,7 +21,7 @@ Supabase → SQL Editor → New query → wklej `supabase/setup.sql` → Run. Tw
 
 ## Układ (jak RepCount, uproszczony)
 
-Dolny pasek: **Treningi · Plany · Postępy**, ustawienia pod zębatką w rogu. Wiersze oddzielone cienką linią zamiast kart.
+Dolny pasek: **Treningi · Plany · Postępy**, ustawienia pod zębatką w rogu. Akcent żółty jak w logo, tło grafitowe.
 
 - **Treningi:** dziennik treningów po miesiącach (data, nazwa, ćwiczenia z „3 × 100 kg”), wyszukiwarka, przycisk **+** = nowy trening (pusty albo z planu). Trwający trening można zwinąć — pasek „Wróć” nad zakładkami.
 - **Ekran treningu:** ⌄ (zwiń), **Zakończ**, ⏰ timer i ⋯, pod nimi czas trwania. Serie **Kg / Powt. / Notatka**; szare liczby to wynik z ostatniego razu (dotknięcie numeru serii wpisuje go), wpisanie samych powtórzeń uzupełnia ciężar, „Dodaj serię” przenosi ciężar z poprzedniej. ⋯ przy serii: rozgrzewkowa, drop set, do upadku, usuń. Superserie (A1, B1…). Po wpisaniu serii od dołu wysuwa się „Przerwa?” — „Tak” włącza czas z ustawień (1:00 / 2:00 / 3:00). Po zakończeniu: czas i rekordy („stary wynik › dziś nowy”).
