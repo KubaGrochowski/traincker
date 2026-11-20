@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 29;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 30;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -367,10 +367,9 @@
     const lines = w.ex.map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('');
     const star = n ? `<button class="prstar" data-prstar aria-label="${n} ${plural(n, 'rekord', 'rekordy', 'rekordów')}"><span class="ps-l">${plural(n, 'Rekord', 'Rekordy', 'Rekordów')}</span><span class="ps-i">${STAR}<b>${n}</b></span></button>` : '';
     return `<div class="wcard${open ? ' open' : ''}" data-wexp="${w.id}" role="button" tabindex="0" aria-expanded="${open}" style="--i:${i}">
-      <div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span>${star}</div>
+      <div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-dur">${fmtDur(s.ms)}</span></div>
       <b class="wc-n">${esc(w.name)}</b>
-      <div class="wc-t"><span>Rozpoczęto: <b>${hhmm(w.start)}</b></span><span>Łącznie: <b>${fmtDur(s.ms)}</b></span></div>
-      ${open ? `<ul>${lines}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button>` : ''}</div>`;
+      ${open ? `<ul>${lines}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button>` : ''}${star}</div>`;
   }
   function renderLog() {
     const all = finished();
@@ -1318,7 +1317,7 @@
     if ((b = T('[data-exinfo]'))) { pushDetail({ type: 'ex', eid: b.dataset.exinfo, tab: b.dataset.xt || 'hist' }); return; }
     if (T('[data-addex]')) { openPicker('workout'); return; }
     // listy i szczegóły
-    if ((b = T('[data-prstar]'))) { b.classList.toggle('open'); return; }
+    if ((b = T('[data-prstar]'))) { const st = b; st.classList.add('open'); clearTimeout(st._t); st._t = setTimeout(() => st.classList.remove('open'), 2000); return; }
     if (T('[data-logcal]')) { pickMonth = null; openLogCal(); return; }
     if ((b = T('[data-w]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1); pushDetail({ type: 'w', id: b.dataset.w }); return; }
     if ((b = T('[data-wexp]'))) { const id = b.dataset.wexp; if (openCards.has(id)) openCards.delete(id); else openCards.add(id); renderLog(); return; }

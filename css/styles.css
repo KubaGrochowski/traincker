@@ -1160,3 +1160,9 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 .calnav.big b{font-size:16px}
 .sheet .calg{gap:6px}
 .sheet .cday{max-width:44px}
+/* kafelek: czas trwania w prawym górnym rogu, gwiazdka rekordów w prawym dolnym */
+.wcard{position:relative}
+.wc-dur{font:500 13px var(--f-body);color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.wcard .wc-n{margin-bottom:0;padding-right:44px}
+.wcard .prstar{position:absolute;right:12px;bottom:8px;margin:0}
+.wcard.open .wc-more{margin-bottom:2px}
