@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 35;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 36;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -386,6 +386,7 @@
   const ROT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const FIG_D = 18; // pół grubości ciała (px)
   function figHtml(m) {
+    if (window.Body3D?.ok) return `<div class="figbox"><div class="fig3d gl" id="fig3d" aria-label="Model 3D — przesuń palcem, żeby obrócić"></div><p class="fmus" id="fmus">${m.pr.map(x => muscleName(x)).join(' · ')}</p></div>`;
     const shd = id => `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset=".32" stop-color="#fff" stop-opacity=".12"/><stop offset=".55" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient></defs>`;
     const face = side => { const id = 'shd-' + side; return `<div class="fface ${side}"><svg class="bmap big" viewBox="0 0 100 192" role="img" aria-label="${side === 'front' ? 'Przód' : 'Tył'} — ćwiczone partie">${shd(id)}${figure(side, m.lvl, 0)}<g class="shade" style="--shd:url(#${id})">${figure(side, {}, 0)}</g></svg></div>`; };
     let slabs = '';
@@ -410,13 +411,17 @@
   // zmiana dnia: partie na sylwetce przechodzą płynnie, obrót zostaje
   function drawDay(anim) {
     const ws = logDay ? dayWs(logDay) : [], m = musOf(ws), rot = $('frot');
-    if (rot) {
+    const gl = $('fig3d')?.classList.contains('gl');
+    if (gl) { window.Body3D.set(m.lvl); $('fmus').textContent = m.pr.map(x => muscleName(x)).join(' · '); }
+    else if (rot) {
       rot.querySelectorAll('g[data-m]').forEach(g => { const v = m.lvl[g.dataset.m] || 0; g.classList.toggle('on', !!v); if (v) g.style.setProperty('--v', v); else g.style.removeProperty('--v'); });
       $('fmus').textContent = m.pr.map(x => muscleName(x)).join(' · ');
-    } else $('log-fig').innerHTML = figHtml(m);
+    } else { $('log-fig').innerHTML = figHtml(m); if ($('fig3d')?.classList.contains('gl')) window.Body3D.mount($('fig3d'), m.lvl); }
     $('log-day').innerHTML = dayDetail(ws);
     if (anim && !calm()) $('log-day').animate({ opacity: [0, 1], transform: ['translateY(8px)', 'none'] }, { duration: 260, easing: 'ease-out' });
   }
+  // model 3D ładuje się jako moduł — gdy będzie gotowy, podmień płaską sylwetkę
+  addEventListener('body3d-ready', () => { if (window.Body3D?.ok && tab === 'log' && $('log-fig')) { $('log-fig').innerHTML = ''; drawDay(); } });
   function selectDay(k) {
     logDay = k; logWeek = weekStart(keyDate(k));
     $('log-strip').innerHTML = weekStrip(); drawDay(true);

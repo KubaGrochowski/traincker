@@ -1279,3 +1279,8 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 .bmap.big .mu.on{fill:color-mix(in srgb,var(--accent) calc(var(--v,1)*100%),#3E3E42)}
 .fig3d{filter:drop-shadow(0 18px 18px rgba(0,0,0,.45))}
 @media (prefers-reduced-motion:reduce){.fig3d.idle .fspin{animation:none}}
+
+/* ---------- model 3D (three.js) ---------- */
+.fig3d.gl{width:220px;height:330px;perspective:none;filter:none;position:relative;cursor:grab}
+.fig3d.gl canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:pan-y}
+.fig3d.gl::after{content:"";position:absolute;left:50%;bottom:6px;width:120px;height:18px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent)}
