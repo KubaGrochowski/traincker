@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 32;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 33;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -361,72 +361,103 @@
   const elapsed = () => state.active ? fmtSec((Date.now() - state.active.start) / 1000) : '0:00';
 
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
-  const openCards = new Set(); // rozwinięte kafelki treningów
-  // mięśnie, które pracowały w danym treningu (główne mocno, pomocnicze słabiej)
-  function wMuscles(w) {
-    const pr = new Set(), se = new Set();
-    w.ex.forEach(e => { const x = exOf(e); if (x.kind === 'cardio' || !work(e.sets).length) return; (x.primary || []).forEach(m => pr.add(m)); (x.secondary || []).forEach(m => se.add(m)); });
-    return bodyMap([...pr], [...se].filter(m => !pr.has(m)));
-  }
-  // pasek tygodnia: 7 dni, dni z treningiem na żółto; przesunięcie w bok zmienia tydzień
-  let logWeek = null, wsDir = 0;
+  // Treningi: pasek tygodnia → duża obracana sylwetka z ćwiczonymi partiami → co było ćwiczone (rekordy na żółto)
+  let logWeek = null, logDay = null, wsDir = 0, figAng = 0;
+  const dayWs = k => finished().filter(w => key(new Date(w.start)) === k).reverse();
+  const keyDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
   function weekStrip() {
     const t = todayKey(), cur = weekStart(new Date());
-    if (!logWeek) logWeek = cur;
     const by = new Map(); finished().forEach(w => { const k = key(new Date(w.start)); by.set(k, (by.get(k) || 0) + 1); });
     const end = addDays(logWeek, 6), sameM = end.getMonth() === logWeek.getMonth();
     const lbl = `${logWeek.getDate()}${sameM ? '' : ' ' + MON_S[logWeek.getMonth()]} – ${end.getDate()} ${MON_S[end.getMonth()]}${end.getFullYear() !== new Date().getFullYear() ? ' ' + end.getFullYear() : ''}`;
     const isNow = key(logWeek) === key(cur);
     const n = DAYS.reduce((a, _, i) => a + (by.get(key(addDays(logWeek, i))) || 0), 0);
-    const days = DAYS.map((dn, i) => { const d = addDays(logWeek, i), k = key(d), c = by.get(k) || 0; return `<button class="wsd${c ? ' on' : ''}${k === t ? ' t' : ''}${k > t ? ' fut' : ''}" ${c ? `data-wsday="${k}"` : 'disabled'} aria-label="${dn} ${d.getDate()}${c ? ' — trening' : ''}"><small>${dn}</small><b>${d.getDate()}</b></button>`; }).join('');
+    const days = DAYS.map((dn, i) => { const d = addDays(logWeek, i), k = key(d), c = by.get(k) || 0; return `<button class="wsd${c ? ' on' : ''}${k === logDay ? ' sel' : ''}${k === t ? ' t' : ''}${k > t ? ' fut' : ''}" ${c ? `data-wsday="${k}"` : 'disabled'} aria-pressed="${k === logDay}" aria-label="${dn} ${d.getDate()}${c ? ' — trening' : ''}"><small>${dn}</small><b>${d.getDate()}</b></button>`; }).join('');
     return `<div class="wkstrip" id="wkstrip"><div class="ws-nav"><button class="navarr" data-wsm="-1" aria-label="Poprzedni tydzień">‹</button><button class="ws-l" data-logcal aria-label="Wybierz dzień z kalendarza"><b>${isNow ? 'Ten tydzień' : lbl}</b><small>${n ? `${n} ${plural(n, 'trening', 'treningi', 'treningów')}` : 'bez treningu'}</small></button><button class="navarr" data-wsm="1" aria-label="Następny tydzień" ${isNow ? 'disabled' : ''}>›</button></div><div class="ws-days${wsDir && !calm() ? (wsDir > 0 ? ' sl-l' : ' sl-r') : ''}">${days}</div></div>`;
   }
-  let wsX = null;
-  tabView.addEventListener('pointerdown', e => { wsX = e.target.closest('#wkstrip') ? { x: e.clientX, y: e.clientY } : null; });
-  tabView.addEventListener('pointerup', e => {
-    if (!wsX) return; const dx = e.clientX - wsX.x, dy = e.clientY - wsX.y; wsX = null;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { moveWeek(dx < 0 ? 1 : -1); swallowClick(); }
-  });
-  function swallowClick() { const f = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', f, true); setTimeout(() => document.removeEventListener('click', f, true), 50); }
+  // mięśnie z treningów danego dnia: główne 1, pomocnicze 0.45
+  function musOf(ws) {
+    const pr = new Set(), se = new Set();
+    ws.forEach(w => w.ex.forEach(e => { const x = exOf(e); if (x.kind === 'cardio' || !work(e.sets).length) return; (x.primary || []).forEach(m => pr.add(m)); (x.secondary || []).forEach(m => se.add(m)); }));
+    const lvl = {}; se.forEach(m => { lvl[m] = .45; }); pr.forEach(m => { lvl[m] = 1; });
+    return { lvl, pr: [...pr] };
+  }
+  const sideOf = a => (((Math.round(a / 180)) % 2) + 2) % 2 ? 'Tył' : 'Przód';
+  const ROT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function figHtml(m) {
+    const face = side => `<div class="fface ${side}"><svg class="bmap big" viewBox="0 0 100 192" role="img" aria-label="${side === 'front' ? 'Przód' : 'Tył'} — ćwiczone partie">${figure(side, m.lvl, 0)}</svg></div>`;
+    return `<div class="figbox"><div class="fig3d" id="fig3d" role="button" tabindex="0" aria-label="Obróć sylwetkę"><div class="frot" id="frot" style="transform:rotateY(${figAng}deg)">${face('front')}${face('back')}</div></div>
+      <button class="fside" data-figflip>${ROT}<span id="fside">${sideOf(figAng)}</span></button>
+      <p class="fmus" id="fmus">${m.pr.map(x => muscleName(x)).join(' · ')}</p></div>`;
+  }
+  function dayDetail(ws) {
+    if (!ws.length) return '<p class="empty dd-none">W tym tygodniu nie było treningu</p>';
+    return ws.map(w => {
+      const n = w.prs?.length || 0, st = wStats(w);
+      const ex = w.ex.map(e => {
+        const k = exOf(e).kind, sets = work(e.sets).filter(x => valid(x, k)); if (!sets.length) return '';
+        return `<li class="dx"><span class="dx-n">${esc(exOf(e).name)}</span><span class="dx-s">${sets.map(x => `<i${x.pr ? ' class="pr" title="Rekord"' : ''}>${fmtSet(x, k)}</i>`).join('')}</span></li>`;
+      }).join('');
+      return `<section class="dday" data-wid="${w.id}"><div class="dd-h"><div class="dd-t"><small>${dateLabel(w.start)}</small><b>${esc(w.name)}</b></div><span class="dd-dur">${fmtDur(st.ms)}</span></div>
+        <div class="dd-pr${n ? ' on' : ''}">${STAR}<span>${n ? `${n} ${plural(n, 'rekord', 'rekordy', 'rekordów')}` : 'Bez rekordów'}</span></div>
+        <ul class="dxl">${ex}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button></section>`;
+    }).join('');
+  }
+  // zmiana dnia: partie na sylwetce przechodzą płynnie, obrót zostaje
+  function drawDay(anim) {
+    const ws = logDay ? dayWs(logDay) : [], m = musOf(ws), rot = $('frot');
+    if (rot) {
+      rot.querySelectorAll('g[data-m]').forEach(g => { const v = m.lvl[g.dataset.m] || 0; g.classList.toggle('on', !!v); if (v) g.style.setProperty('--v', v); else g.style.removeProperty('--v'); });
+      $('fmus').textContent = m.pr.map(x => muscleName(x)).join(' · ');
+    } else $('log-fig').innerHTML = figHtml(m);
+    $('log-day').innerHTML = dayDetail(ws);
+    if (anim && !calm()) $('log-day').animate({ opacity: [0, 1], transform: ['translateY(8px)', 'none'] }, { duration: 260, easing: 'ease-out' });
+  }
+  function selectDay(k) {
+    logDay = k; logWeek = weekStart(keyDate(k));
+    $('log-strip').innerHTML = weekStrip(); drawDay(true);
+  }
   function moveWeek(dir) {
     const nx = addDays(logWeek, dir * 7);
     if (nx > weekStart(new Date())) return;
-    logWeek = nx; wsDir = dir; $('log-strip').innerHTML = weekStrip(); wsDir = 0;
+    logWeek = nx; wsDir = dir;
+    const inWk = finished().find(w => w.start >= nx.getTime() && w.start < addDays(nx, 7).getTime()); // najnowszy trening tygodnia
+    logDay = inWk ? key(new Date(inWk.start)) : '';
+    $('log-strip').innerHTML = weekStrip(); wsDir = 0; drawDay(true);
   }
-  // dotknięcie dnia: przewinięcie do treningu, rozwinięcie i krótkie podświetlenie
-  function goDay(k) {
-    const ws = finished().filter(w => key(new Date(w.start)) === k); if (!ws.length) return;
-    const idx = finished().indexOf(ws[ws.length - 1]); if (idx >= hLimit) hLimit = idx + 10;
-    ws.forEach(w => openCards.add(w.id)); renderLog();
-    const el = tabView.querySelector(`.wcard[data-day="${k}"]`); if (!el) return;
-    el.scrollIntoView({ block: 'center', behavior: calm() ? 'auto' : 'smooth' });
-    tabView.querySelectorAll(`.wcard[data-day="${k}"]`).forEach(c => { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); });
-  }
-  function wCard(w, i) {
-    const s = wStats(w), open = openCards.has(w.id), n = w.prs?.length || 0;
-    const lines = w.ex.map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('');
-    const star = n ? `<button class="prstar" data-prstar aria-label="${n} ${plural(n, 'rekord', 'rekordy', 'rekordów')}"><span class="ps-l">${plural(n, 'Rekord', 'Rekordy', 'Rekordów')}</span><span class="ps-i">${STAR}<b>${n}</b></span></button>` : '';
-    return `<div class="wcard${open ? ' open' : ''}" data-wexp="${w.id}" data-day="${key(new Date(w.start))}" role="button" tabindex="0" aria-expanded="${open}" style="--i:${i}">
-      <div class="wc-top"><div class="wc-map" aria-hidden="true">${wMuscles(w)}</div><div class="wc-main">
-      <div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-dur">${fmtDur(s.ms)}</span></div>
-      <b class="wc-n">${esc(w.name)}</b></div></div>
-      ${open ? `<ul>${lines}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button>` : ''}${star}</div>`;
-  }
+  // przesunięcie palcem: po pasku zmienia tydzień, po sylwetce ją obraca (dotknięcie = pół obrotu)
+  let wsX = null, fg = null;
+  function setFig(a, drag) { const r = $('frot'); if (!r) return; r.classList.toggle('drag', !!drag); r.style.transform = `rotateY(${a}deg)`; const l = $('fside'); if (l) l.textContent = sideOf(a); }
+  tabView.addEventListener('pointerdown', e => {
+    wsX = e.target.closest('#wkstrip') ? { x: e.clientX, y: e.clientY } : null;
+    fg = e.target.closest('#fig3d') ? { x: e.clientX, y: e.clientY, a: figAng, moved: false } : null;
+  });
+  tabView.addEventListener('pointermove', e => {
+    if (!fg) return; const dx = e.clientX - fg.x;
+    if (!fg.moved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(e.clientY - fg.y)) fg.moved = true;
+    if (fg.moved) setFig(fg.a + dx * .8, true);
+  });
+  const figEnd = e => {
+    if (!fg) return; const dx = e.clientX - fg.x;
+    figAng = fg.moved ? Math.round((fg.a + dx * .8) / 180) * 180 : fg.a + 180;
+    fg = null; setFig(figAng); swallowClick();
+  };
+  tabView.addEventListener('pointerup', e => {
+    figEnd(e);
+    if (!wsX) return; const dx = e.clientX - wsX.x, dy = e.clientY - wsX.y; wsX = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { moveWeek(dx < 0 ? 1 : -1); swallowClick(); }
+  });
+  tabView.addEventListener('pointercancel', () => { if (fg) { setFig(figAng); fg = null; } wsX = null; });
+  function swallowClick() { const f = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', f, true); setTimeout(() => document.removeEventListener('click', f, true), 50); }
   function renderLog() {
     const all = finished();
-    let html = '', i = 0, n = 0, lastM = '';
-    for (const w of all) {
-      if (n >= hLimit) break;
-      const d = new Date(w.start), m = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-      if (m !== lastM) { const cnt = all.filter(x => { const y = new Date(x.start); return y.getMonth() === d.getMonth() && y.getFullYear() === d.getFullYear(); }).length; html += `<div class="grp" style="--i:${i++}"><h3>${m}</h3><em>${cnt} ${plural(cnt, 'trening', 'treningi', 'treningów')}</em></div>`; lastM = m; }
-      html += wCard(w, i++); n++;
-    }
-    if (!all.length) html = emptyCard('Zacznij pierwszy trening', 'Naciśnij +, wybierz plan albo pusty trening i dodawaj serie. Następnym razem ciężary z ostatniego treningu podpowiedzą się same.', '<button class="primary acc" data-start>Nowy trening</button>');
-    if (all.length > hLimit) html += '<button class="allweek more" data-more>Pokaż starsze</button>';
-    if (!tabView.querySelector('#w-list')) tabView.innerHTML = `<div id="log-h"></div><div id="log-strip"></div><div class="wlist" id="w-list"></div>`;
+    if (!all.length) { tabView.innerHTML = `${head('Treningi')}<div class="wlist">${emptyCard('Zacznij pierwszy trening', 'Naciśnij +, wybierz plan albo pusty trening i dodawaj serie. Następnym razem ciężary z ostatniego treningu podpowiedzą się same.', '<button class="primary acc" data-start>Nowy trening</button>')}</div>`; return; }
+    if (logDay === null || (logDay && !dayWs(logDay).length)) { logDay = key(new Date(all[0].start)); logWeek = weekStart(new Date(all[0].start)); }
+    if (!logWeek) logWeek = weekStart(new Date(all[0].start));
+    if (!tabView.querySelector('#log-strip')) tabView.innerHTML = `<div id="log-h"></div><div id="log-strip"></div><div id="log-fig"></div><div id="log-day"></div>`;
     $('log-h').innerHTML = head('Treningi');
-    $('log-strip').innerHTML = all.length ? weekStrip() : '';
-    const list = $('w-list'); list.className = 'wlist' + (animTab ? ' enter' : ''); list.innerHTML = html;
+    $('log-strip').innerHTML = weekStrip();
+    drawDay(animTab);
   }
 
   /* ----- Trening (ekran treningu jak w RepCount) ----- */
@@ -1137,7 +1168,7 @@
     const now = new Date(), isNow = y === now.getFullYear() && mo === now.getMonth();
     overlay.innerHTML = sheet('Wybierz dzień', 'Podświetlone dni to treningi', `<div class="calnav big"><button class="navarr" data-pickm="-1" aria-label="Poprzedni miesiąc">‹</button><b>${MONTHS[mo]} ${y}</b><button class="navarr" data-pickm="1" aria-label="Następny miesiąc" ${isNow ? 'disabled' : ''}>›</button></div><div class="calg">${DAYS.map(d => `<span class="cdh">${d}</span>`).join('')}${cells}</div>`, 'Kalendarz treningów');
     overlay.querySelectorAll('[data-pickm]').forEach(b => b.addEventListener('click', () => { pickMonth = new Date(y, mo + +b.dataset.pickm, 1); openLogCal(); }));
-    overlay.querySelectorAll('[data-pickday]').forEach(b => b.addEventListener('click', () => { close(); const [yy, mm, dd] = b.dataset.pickday.split('-').map(Number); logWeek = weekStart(new Date(yy, mm - 1, dd)); goDay(b.dataset.pickday); }));
+    overlay.querySelectorAll('[data-pickday]').forEach(b => b.addEventListener('click', () => { close(); selectDay(b.dataset.pickday); tabView.scrollTop = 0; }));
   }
   function openDay(k) {
     const ws = finished().filter(w => key(new Date(w.start)) === k);
@@ -1356,12 +1387,11 @@
     if ((b = T('[data-exinfo]'))) { pushDetail({ type: 'ex', eid: b.dataset.exinfo, tab: b.dataset.xt || 'hist' }); return; }
     if (T('[data-addex]')) { openPicker('workout'); return; }
     // listy i szczegóły
-    if ((b = T('[data-prstar]'))) { const st = b; st.classList.add('open'); clearTimeout(st._t); st._t = setTimeout(() => st.classList.remove('open'), 2000); return; }
     if (T('[data-logcal]')) { pickMonth = logWeek ? new Date(logWeek.getFullYear(), logWeek.getMonth(), 1) : null; openLogCal(); return; }
     if ((b = T('[data-wsm]'))) { moveWeek(+b.dataset.wsm); return; }
-    if ((b = T('[data-wsday]'))) { goDay(b.dataset.wsday); return; }
+    if ((b = T('[data-wsday]'))) { if (b.dataset.wsday !== logDay) selectDay(b.dataset.wsday); return; }
+    if (T('[data-figflip]')) { figAng += 180; setFig(figAng); return; }
     if ((b = T('[data-w]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1); pushDetail({ type: 'w', id: b.dataset.w }); return; }
-    if ((b = T('[data-wexp]'))) { const id = b.dataset.wexp; if (openCards.has(id)) openCards.delete(id); else openCards.add(id); renderLog(); return; }
     if ((b = T('[data-wmenu]'))) { workoutActions(b.dataset.wmenu); return; }
     if ((b = T('[data-wprs]'))) { const w = state.workouts[b.dataset.wprs]; if (w?.prs?.length) openPRs(w); return; }
     if ((b = T('[data-repeat]'))) { const w = state.workouts[b.dataset.repeat]; if (w) startWorkout({ name: w.name, rid: w.rid, ex: w.ex.map(e => ({ eid: e.eid, sup: e.sup, note: e.note, tg: e.sets })) }); return; }

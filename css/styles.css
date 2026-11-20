@@ -1221,3 +1221,40 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 .wcard.flash{animation:w-flash 1.2s var(--ease)}
 @keyframes w-flash{0%,40%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:0 0 0 2px transparent}}
 .wc-main .wc-d{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* ---------- Treningi: wybrany dzień — pasek, sylwetka, ćwiczenia ---------- */
+.wsd.on{background:color-mix(in srgb,var(--accent) 16%,var(--surface));color:var(--accent)}
+.wsd.on small{color:color-mix(in srgb,var(--accent) 70%,transparent)}
+.wsd.sel{background:var(--accent);color:var(--on-acc);transform:translateY(-2px)}
+.wsd.sel small{color:color-mix(in srgb,var(--on-acc) 65%,transparent)}
+.figbox{display:flex;flex-direction:column;align-items:center;padding:6px 0 4px}
+.fig3d{width:180px;height:340px;perspective:900px;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.fig3d:active{cursor:grabbing}
+.frot{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.frot.drag{transition:none}
+.fface{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.fface.back{transform:rotateY(180deg)}
+.fface .bmap{width:100%;height:100%}
+.bmap.big .sil{stroke-width:4}
+.bmap.big .mu{transition:fill .45s ease}
+.fside{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:6px 12px;border-radius:999px;background:var(--surface);color:var(--ink-2);font:500 12.5px var(--f-body)}
+.fside svg{color:var(--accent)}
+.fmus{margin:8px 0 0;min-height:18px;text-align:center;font:500 13px var(--f-body);color:var(--ink-2);padding:0 12px}
+.dday{background:var(--surface);border:1px solid var(--line);border-radius:var(--card);padding:14px 16px;margin-top:12px}
+.dd-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.dd-t{min-width:0}
+.dd-t small{display:block;color:var(--accent);font:600 13px var(--f-body)}
+.dd-t b{display:block;font:500 20px var(--f-head);margin-top:2px}
+.dd-dur{font:500 13px var(--f-body);color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums;padding-top:2px}
+.dd-pr{display:inline-flex;align-items:center;gap:6px;margin:10px 0 4px;font:500 13px var(--f-body);color:var(--ink-3)}
+.dd-pr svg{width:16px;height:16px}
+.dd-pr.on{color:var(--accent)}
+.dxl{list-style:none;margin:6px 0 0;padding:0}
+.dx{padding:10px 0;border-top:1px solid var(--line)}
+.dx-n{display:block;font:500 15px var(--f-body);color:var(--ink);margin-bottom:6px}
+.dx-s{display:flex;flex-wrap:wrap;gap:6px}
+.dx-s i{font:500 13px var(--f-body);font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink-2);background:var(--surface-2);padding:3px 9px;border-radius:999px}
+.dx-s i.pr{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+.dd-none{text-align:center;padding:16px 0}
+@media (prefers-reduced-motion:reduce){.frot{transition:none}}
+.fig3d{width:160px;height:304px}
