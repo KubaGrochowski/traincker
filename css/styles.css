@@ -1113,3 +1113,6 @@ body:not(.gate) #tab-view[data-tab="log"]{padding-bottom:92px}
 .ilist.sorting .irow{transition:transform .18s var(--ease)}
 .ilist.sorting .irow.dragging{transition:none;position:relative;z-index:2;background:var(--surface-2);box-shadow:0 10px 26px rgba(0,0,0,.55);border-radius:12px;cursor:grabbing}
 .ilist.sorting .irow.dragging .rhandle{color:var(--accent)}
+/* bez paska przewijania (jak na iPhonie, także w ramce telefonu na komputerze) */
+#tab-view,.layer,.sheet,.mchips{scrollbar-width:none}
+#tab-view::-webkit-scrollbar,.layer::-webkit-scrollbar,.sheet::-webkit-scrollbar{display:none}

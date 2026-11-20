@@ -6,6 +6,7 @@
    W chmurze jest jeden wiersz na użytkownika: tabela gym_data (user_id, data jsonb, updated_at). */
 (() => {
   'use strict';
+  if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
   const SUPABASE_URL = 'https://xumjkmfctdutouvfgzsh.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_EPRQnKETbD-CYt_TXALc8Q_v_PoC0yK'; // klucz publiczny (przeglądarkowy)
