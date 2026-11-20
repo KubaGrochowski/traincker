@@ -1166,3 +1166,24 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 .wcard .wc-n{margin-bottom:0;padding-right:44px}
 .wcard .prstar{position:absolute;right:12px;bottom:8px;margin:0}
 .wcard.open .wc-more{margin-bottom:2px}
+
+/* ---------- budzik przerwy (prawy dolny róg ekranu treningu) ---------- */
+.restclock{position:fixed;z-index:30;right:max(16px,calc(50vw - 300px + 16px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:88px;height:88px;border-radius:50%;border:0;padding:0;background:var(--surface);box-shadow:0 0 0 1px var(--line),0 8px 24px rgba(0,0,0,.45);color:var(--accent);display:grid;place-items:center;cursor:pointer;animation:rc-in .35s var(--ease)}
+.restclock svg{position:absolute;inset:6px;width:76px;height:76px;overflow:visible}
+.rc-bell path{fill:var(--accent)}
+.rc-bell{transform-box:fill-box;transform-origin:50% 100%}
+.rc-leg{stroke:var(--accent);stroke-width:5;stroke-linecap:round;fill:none}
+.rc-body{fill:var(--surface);stroke:var(--accent);stroke-width:5}
+.rc-prog{fill:none;stroke:var(--accent);stroke-width:4;stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--p,1));transform:rotate(-90deg) scaleY(-1);transform-origin:50px 55px;opacity:.35;transition:stroke-dashoffset .25s linear}
+.restclock.run .rc-prog{opacity:1}
+.rc-t{position:relative;margin-top:9px;font:600 15px var(--f-body);font-variant-numeric:tabular-nums;color:var(--accent);letter-spacing:0}
+.restclock.run .rc-bell.l{animation:rc-wig 1s ease-in-out infinite}
+.restclock.run .rc-bell.r{animation:rc-wig 1s ease-in-out infinite reverse}
+.restclock.ring{animation:rc-ring .12s linear 20}
+.restclock.ring .rc-bell{animation:rc-wig .12s linear 20}
+.restclock:active{transform:scale(.94)}
+@keyframes rc-in{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes rc-wig{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+@keyframes rc-ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+#wk-layer .wk-body{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+@media (prefers-reduced-motion:reduce){.restclock,.restclock *{animation:none!important}}

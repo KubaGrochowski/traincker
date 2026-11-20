@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 30;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 31;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -339,7 +339,7 @@
     document.querySelectorAll('#tabbar [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
     renderTab();
     renderLive();
-    if (wOpen && state.active) { wkLayer.hidden = false; renderWorkout(); } else { wkLayer.hidden = true; wkLayer.innerHTML = ''; wOpen = false; hideAsk(true); }
+    if (wOpen && state.active) { wkLayer.hidden = false; renderWorkout(); } else { wkLayer.hidden = true; wkLayer.innerHTML = ''; wOpen = false; }
     if (stack.length) { dtLayer.hidden = false; renderDetail(); } else { dtLayer.hidden = true; dtLayer.innerHTML = ''; }
     document.body.classList.toggle('locked', wOpen || !!stack.length);
     animTab = false;
@@ -420,11 +420,11 @@
   function renderWorkout() {
     const a = state.active, sy = wkLayer.scrollTop, s = wStats(a, true), d = new Date(a.start);
     const fresh = !wkLayer.querySelector('.wk-body');
-    const bar = `<div class="topbar wkbar"><button class="tb-i" data-wk-min aria-label="${a.edit ? 'Anuluj edycję' : 'Zwiń trening'}">${a.edit ? XMARK : DOWN}</button><div class="tb-mid"><button class="fin" data-finish>${a.edit ? 'Zapisz' : 'Zakończ'}</button></div><div class="tb-rt"><div class="tb-g"><button class="tb-timer${rest ? ' run' : ''}" data-timer aria-label="Timer przerwy">${ALARM}<span data-rl>${rest ? fmtSec(restLeft()) : ''}</span></button><button data-wk-menu aria-label="Opcje treningu">${DOTSC}</button></div><small class="tb-el">${a.edit ? 'edycja' : `<span data-el>${elapsed()}</span>`}</small></div></div>`;
+    const bar = `<div class="topbar wkbar"><button class="tb-i" data-wk-min aria-label="${a.edit ? 'Anuluj edycję' : 'Zwiń trening'}">${a.edit ? XMARK : DOWN}</button><div class="tb-mid"><button class="fin" data-finish>${a.edit ? 'Zapisz' : 'Zakończ'}</button></div><div class="tb-rt"><div class="tb-g"><button data-wk-menu aria-label="Opcje treningu">${DOTSC}</button></div><small class="tb-el">${a.edit ? 'edycja' : `<span data-el>${elapsed()}</span>`}</small></div></div>`;
     const body = `<div class="wk-head"><div class="eyebrow">${DAYS_FULL[dow(d)]} · ${hhmm(a.start)}</div><input class="wname" id="w-name" type="text" maxlength="60" value="${esc(a.name)}" aria-label="Nazwa treningu" autocomplete="off">${a.note ? `<p class="wnote" data-wk-menu>${esc(a.note)}</p>` : ''}</div>
       <div class="exlist${fresh ? ' enter' : ''}">${groupsOf(a.ex).map(([i, g]) => exCard(g, i)).join('') || emptyCard('Pusty trening', 'Dodaj pierwsze ćwiczenie. Szare liczby w seriach to wynik z ostatniego razu — dotknij numeru serii, żeby go wpisać.')}</div>
       <button class="addex" data-addex>${PLUSC}<span>Dodaj ćwiczenie</span></button>`;
-    wkLayer.innerHTML = `${bar}<div class="wk-body">${body}</div>`;
+    wkLayer.innerHTML = `${bar}<div class="wk-body">${body}</div>${a.edit ? '' : clockHtml()}`;
     wkLayer.scrollTop = sy;
   }
   const statChips = s => `<span><b>${s.sets}</b> ${plural(s.sets, 'seria', 'serie', 'serii')}</span><span><b>${fmtVol(s.vol)}</b> ${U()}</span><span><b>${state.active?.ex.length || 0}</b> ćw.</span>`;
@@ -445,7 +445,6 @@
     if (!calm()) { row.querySelector('.sn').animate({ transform: ['scale(.7)', 'scale(1.15)', 'scale(1)'] }, { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }); const r = row.querySelector('.sn').getBoundingClientRect(); ripple(r.left + r.width / 2, r.top + r.height / 2, .9); }
     if (pr) toast(`Nowy rekord (${PR_NAME[pr]}): ${exOf(e).name} · ${fmtSet(e.sets[+row.dataset.s], k, true)}`);
     const next = a.ex[xi + 1], inSup = e.sup && next && next.sup === e.sup;
-    if (!a.edit && state.settings.autoRest && !inSup && k !== 'cardio' && restOf(e) > 0) askRest(restOf(e));
   }
   // nowe ćwiczenie w treningu: serie z ostatniego razu jako szare podpowiedzi (jak w RepCount)
   function newEntry(eid, opt = {}) {
@@ -1113,7 +1112,6 @@
         <div class="irow static"><span class="ir-t"><b>Nazwy ćwiczeń</b></span><span class="smode u2 lang"><button data-lang="pl" class="${s.lang !== 'en' ? 'on' : ''}" aria-label="Polski">${FLAG_PL}</button><button data-lang="en" class="${s.lang === 'en' ? 'on' : ''}" aria-label="English">${FLAG_GB}</button></span></div>
         <div class="irow static"><span class="ir-t"><b>Jednostka</b></span><span class="smode u2"><button data-unit="kg" class="${s.unit !== 'lb' ? 'on' : ''}">kg</button><button data-unit="lb" class="${s.unit === 'lb' ? 'on' : ''}">lb</button></span></div>
         <div class="irow static"><span class="ir-t"><b>Przerwa</b></span><span class="smode u3">${REST_OPTS.map(o => `<button data-rest-set="${o}" class="${s.rest === o ? 'on' : ''}">${fmtSec(o)}</button>`).join('')}</span></div>
-        <div class="irow static"><span class="ir-t"><b>Pytaj o przerwę po serii</b></span>${tog('autoRest', s.autoRest)}</div>
       </div>
       <div class="ilist"><div class="irow static"><span class="ir-t"><b>${esc(window.Cloud?.user?.email || 'Bez konta')}</b><small>${cs === 'ok' ? 'zsynchronizowano' : cs === 'syncing' ? 'synchronizacja…' : cs === 'offline' ? 'bez internetu — wyśle później' : cs === 'error' ? 'błąd synchronizacji' : ''}</small></span></div><button class="irow out" data-logout><span class="ir-t"><b>Wyloguj się</b></span></button></div>
       <p class="ver">Traincker · wersja ${APP_VERSION}</p></div>`;
@@ -1145,31 +1143,33 @@
     try { localStorage.setItem(REST_KEY, JSON.stringify(rest)); } catch (_) { }
     unlockAudio(); clearInterval(restInt); restInt = setInterval(tickRest, 250); tickRest();
     if (!auto) openTimer();
-    else document.querySelectorAll('.tb-timer').forEach(b => { b.classList.add('run'); if (!calm()) b.animate({ transform: ['scale(1)', 'scale(1.12)', 'scale(1)'] }, { duration: 400 }); });
+    drawClock();
     renderLive();
   }
-  // wysuwane z boku pytanie „Przerwa?” — „Tak” włącza timer ustawiony wcześniej (Więcej → Przerwa między seriami)
-  let askT = null;
-  function askRest(sec) {
-    hideAsk(true);
-    const el = document.createElement('div');
-    el.className = 'restask'; el.id = 'restask'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Przerwa?');
-    el.innerHTML = `<span class="ra-q">${ALARM}<b>Przerwa?</b></span><button class="ra-yes" data-rest-yes="${sec}">Tak · ${fmtSec(sec)}</button><button class="ra-no" data-rest-no aria-label="Nie">${XMARK}</button>`;
-    document.body.appendChild(el);
-    clearTimeout(askT); askT = setTimeout(() => hideAsk(), 9000);
+  // budzik w prawym dolnym rogu: żółty na grafitowym tle, w środku odliczanie przerwy
+  function clockHtml() {
+    const left = rest ? Math.ceil(restLeft()) : state.settings.rest, p = rest ? (restLeft() / rest.total).toFixed(4) : 1;
+    return `<button class="restclock${rest ? ' run' : ''}" id="restclock" data-restclock style="--p:${p}" aria-label="${rest ? 'Przerwa trwa — pozostało ' + fmtSec(left) : 'Włącz przerwę ' + fmtSec(left)}">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g class="rc-bell l"><path d="M14 30a17 17 0 0 1 24-21z"/></g><g class="rc-bell r"><path d="M86 30a17 17 0 0 0-24-21z"/></g>
+        <path class="rc-leg" d="M28 86l-7 8M72 86l7 8"/>
+        <circle class="rc-body" cx="50" cy="55" r="36"/>
+        <circle class="rc-prog" cx="50" cy="55" r="30" pathLength="1"/>
+      </svg><b class="rc-t" data-rl>${fmtSec(left)}</b></button>`;
   }
-  function hideAsk(now) {
-    clearTimeout(askT);
-    const el = $('restask'); if (!el) return;
-    if (now || calm()) { el.remove(); return; }
-    el.classList.add('out'); setTimeout(() => el.remove(), 260);
+  function drawClock(ring) {
+    const old = $('restclock'); if (!old) return;
+    const t = document.createElement('div'); t.innerHTML = clockHtml(); const n = t.firstElementChild;
+    if (ring && !calm()) { n.classList.add('ring'); setTimeout(() => n.classList.remove('ring'), 2600); }
+    old.replaceWith(n);
   }
-  function stopRest() { hideAsk(true); rest = null; try { localStorage.removeItem(REST_KEY); } catch (_) { } clearInterval(restInt); restInt = null; document.querySelectorAll('.tb-timer').forEach(b => { b.classList.remove('run'); b.querySelector('[data-rl]').textContent = ''; }); if ($('t-ring')) drawTimer(); renderLive(); }
+  function stopRest() { rest = null; try { localStorage.removeItem(REST_KEY); } catch (_) { } clearInterval(restInt); restInt = null; drawClock(); if ($('t-ring')) drawTimer(); renderLive(); }
   function tickRest() {
     if (!rest) return;
     const left = restLeft();
     if (left <= 0) { restDone(); return; }
     document.querySelectorAll('[data-rl]').forEach(el => { el.textContent = fmtSec(Math.ceil(left)); });
+    $('restclock')?.style.setProperty('--p', (left / rest.total).toFixed(4));
     const ring = $('t-ring'); if (ring) { ring.style.setProperty('--p', (left / rest.total).toFixed(4)); $('t-left').textContent = fmtSec(Math.ceil(left)); }
   }
   function restDone() {
@@ -1180,8 +1180,7 @@
     const vibrated = !!navigator.vibrate?.(buzz);
     if (state.settings.sound) beep();
     if ((document.hidden || !vibrated) && 'Notification' in window && Notification.permission === 'granted') navigator.serviceWorker?.getRegistration().then(r => r?.showNotification('Koniec przerwy', { body: 'Czas na kolejną serię', tag: 'ggym-rest', renotify: true, vibrate: buzz, icon: 'icons/icon-192.png' })).catch(() => { });
-    document.querySelectorAll('[data-rl]').forEach(el => { el.textContent = ''; });
-    document.querySelectorAll('.tb-timer').forEach(b => { b.classList.remove('run'); b.classList.add('end'); setTimeout(() => b.classList.remove('end'), 2000); });
+    drawClock(true);
     if ($('t-ring')) { drawTimer(); $('t-ring').classList.add('end'); }
     toast('Koniec przerwy — kolejna seria');
     renderLive();
@@ -1300,15 +1299,13 @@
     // zakładki i główne przyciski
     if ((b = T('#tabbar [data-tab]'))) { if (b.dataset.tab === tab && !stack.length) tabView.scrollTo({ top: 0, behavior: 'smooth' }); else setTab(b.dataset.tab); return; }
     if (T('#fab') || T('[data-start]')) { if (!calm()) ripple(e.clientX, e.clientY, 1.2); openStart(); return; }
-    if ((b = T('[data-rest-yes]'))) { unlockAudio(); startRest(+b.dataset.restYes, true); hideAsk(); return; }
-    if (T('[data-rest-no]')) { hideAsk(); return; }
     if (T('#livebar')) { openWorkout(); return; }
     if (T('[data-back]')) { popDetail(); return; }
     // ekran treningu
     if (T('[data-wk-min]')) { if (state.active?.edit) { workoutMenu(); return; } wOpen = false; render(); return; }
     if (T('[data-finish]')) { finishAsk(); return; }
     if (T('[data-wk-menu]')) { workoutMenu(); return; }
-    if (T('[data-timer]')) { unlockAudio(); openTimer(); return; }
+    if (T('[data-restclock]')) { unlockAudio(); if (rest) openTimer(); else startRest(state.settings.rest, true); return; }
     if ((b = T('[data-sn]'))) { tapSet(b.closest('.srow')); return; }
     if ((b = T('[data-smenu]'))) { const r = b.closest('.srow'); setMenu(+r.dataset.x, +r.dataset.s); return; }
     if ((b = T('[data-addset]'))) { addSet(+b.dataset.addset); return; }
