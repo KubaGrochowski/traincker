@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 33;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 35;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -362,7 +362,7 @@
 
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
   // Treningi: pasek tygodnia → duża obracana sylwetka z ćwiczonymi partiami → co było ćwiczone (rekordy na żółto)
-  let logWeek = null, logDay = null, wsDir = 0, figAng = 0;
+  let logWeek = null, logDay = null, wsDir = 0, figAng = 0, figTouched = false;
   const dayWs = k => finished().filter(w => key(new Date(w.start)) === k).reverse();
   const keyDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
   function weekStrip() {
@@ -384,12 +384,16 @@
   }
   const sideOf = a => (((Math.round(a / 180)) % 2) + 2) % 2 ? 'Tył' : 'Przód';
   const ROT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const FIG_D = 18; // pół grubości ciała (px)
   function figHtml(m) {
-    const face = side => `<div class="fface ${side}"><svg class="bmap big" viewBox="0 0 100 192" role="img" aria-label="${side === 'front' ? 'Przód' : 'Tył'} — ćwiczone partie">${figure(side, m.lvl, 0)}</svg></div>`;
-    return `<div class="figbox"><div class="fig3d" id="fig3d" role="button" tabindex="0" aria-label="Obróć sylwetkę"><div class="frot" id="frot" style="transform:rotateY(${figAng}deg)">${face('front')}${face('back')}</div></div>
-      <button class="fside" data-figflip>${ROT}<span id="fside">${sideOf(figAng)}</span></button>
+    const shd = id => `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset=".32" stop-color="#fff" stop-opacity=".12"/><stop offset=".55" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient></defs>`;
+    const face = side => { const id = 'shd-' + side; return `<div class="fface ${side}"><svg class="bmap big" viewBox="0 0 100 192" role="img" aria-label="${side === 'front' ? 'Przód' : 'Tył'} — ćwiczone partie">${shd(id)}${figure(side, m.lvl, 0)}<g class="shade" style="--shd:url(#${id})">${figure(side, {}, 0)}</g></svg></div>`; };
+    let slabs = '';
+    for (let z = -FIG_D + 1.5; z < FIG_D; z += 1.5) slabs += `<div class="fslab" style="transform:translateZ(${z.toFixed(1)}px) scale(${(.92 + .08 * Math.sqrt(1 - (z / FIG_D) ** 2)).toFixed(3)})"><svg viewBox="0 0 100 192" aria-hidden="true">${figure('front', {}, 0)}</svg></div>`;
+    return `<div class="figbox"><div class="fig3d${figTouched || calm() ? '' : ' idle'}" id="fig3d" aria-label="Sylwetka — przesuń palcem, żeby obrócić"><div class="fspin"><div class="frot" id="frot" style="transform:rotateY(${figAng}deg);--lit:${lit(figAng)}">${slabs}${face('front')}${face('back')}</div></div></div>
       <p class="fmus" id="fmus">${m.pr.map(x => muscleName(x)).join(' · ')}</p></div>`;
   }
+  const lit = a => (.55 + .45 * Math.abs(Math.cos(a * Math.PI / 180))).toFixed(3);
   function dayDetail(ws) {
     if (!ws.length) return '<p class="empty dd-none">W tym tygodniu nie było treningu</p>';
     return ws.map(w => {
@@ -427,19 +431,21 @@
   }
   // przesunięcie palcem: po pasku zmienia tydzień, po sylwetce ją obraca (dotknięcie = pół obrotu)
   let wsX = null, fg = null;
-  function setFig(a, drag) { const r = $('frot'); if (!r) return; r.classList.toggle('drag', !!drag); r.style.transform = `rotateY(${a}deg)`; const l = $('fside'); if (l) l.textContent = sideOf(a); }
+  function setFig(a, drag) { const r = $('frot'); if (!r) return; r.classList.toggle('drag', !!drag); r.style.transform = `rotateY(${a}deg)`; r.style.setProperty('--lit', lit(a)); }
   tabView.addEventListener('pointerdown', e => {
     wsX = e.target.closest('#wkstrip') ? { x: e.clientX, y: e.clientY } : null;
-    fg = e.target.closest('#fig3d') ? { x: e.clientX, y: e.clientY, a: figAng, moved: false } : null;
+    fg = e.target.closest('#fig3d') ? { x: e.clientX, y: e.clientY, a: figAng, moved: false, lx: e.clientX, lt: e.timeStamp, v: 0 } : null;
+    if (fg && !figTouched) { figTouched = true; $('fig3d')?.classList.remove('idle'); }
   });
   tabView.addEventListener('pointermove', e => {
     if (!fg) return; const dx = e.clientX - fg.x;
     if (!fg.moved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(e.clientY - fg.y)) fg.moved = true;
-    if (fg.moved) setFig(fg.a + dx * .8, true);
+    if (fg.moved) { const dt = Math.max(1, e.timeStamp - fg.lt); fg.v = fg.v * .5 + ((e.clientX - fg.lx) / dt) * .5; fg.lx = e.clientX; fg.lt = e.timeStamp; setFig(fg.a + dx * .8, true); }
   });
   const figEnd = e => {
     if (!fg) return; const dx = e.clientX - fg.x;
-    figAng = fg.moved ? Math.round((fg.a + dx * .8) / 180) * 180 : fg.a + 180;
+    if (!fg.moved) { fg = null; return; }
+    figAng = Math.round((fg.a + dx * .8 + Math.max(-1.5, Math.min(1.5, fg.v)) * 160) / 180) * 180; // szybki ruch palcem = pełniejszy obrót
     fg = null; setFig(figAng); swallowClick();
   };
   tabView.addEventListener('pointerup', e => {
@@ -1390,7 +1396,6 @@
     if (T('[data-logcal]')) { pickMonth = logWeek ? new Date(logWeek.getFullYear(), logWeek.getMonth(), 1) : null; openLogCal(); return; }
     if ((b = T('[data-wsm]'))) { moveWeek(+b.dataset.wsm); return; }
     if ((b = T('[data-wsday]'))) { if (b.dataset.wsday !== logDay) selectDay(b.dataset.wsday); return; }
-    if (T('[data-figflip]')) { figAng += 180; setFig(figAng); return; }
     if ((b = T('[data-w]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1); pushDetail({ type: 'w', id: b.dataset.w }); return; }
     if ((b = T('[data-wmenu]'))) { workoutActions(b.dataset.wmenu); return; }
     if ((b = T('[data-wprs]'))) { const w = state.workouts[b.dataset.wprs]; if (w?.prs?.length) openPRs(w); return; }
