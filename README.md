@@ -1,6 +1,6 @@
 # Traincker
 
-Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Żółto-grafitowy wygląd: akcent żółty jak w logo, tło grafitowe (#232427), nagłówki Fraunces, tekst i liczby Inter.
+Dziennik treningów na siłowni w stylu RepCount: serie, ciężary i powtórzenia wpisane w kilka sekund, przerwa między seriami, plany, rekordy i wykresy. Żółto-grafitowy wygląd: akcent żółty jak w logo, tło ciemnoszare (#1C1C1E), nagłówki Fraunces, tekst i liczby Inter.
 Adres: https://kubagrochowski.github.io/traincker/
 
 Na komputerze aplikacja wyświetla się w ramce iPhone’a 13 (390 × 844 pkt, zmniejsza się w niskim oknie).
