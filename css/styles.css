@@ -1187,3 +1187,37 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 @keyframes rc-ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
 #wk-layer .wk-body{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 @media (prefers-reduced-motion:reduce){.restclock,.restclock *{animation:none!important}}
+
+/* ---------- Treningi: pasek tygodnia ---------- */
+.wkstrip{margin:0 0 6px;padding:10px 0 12px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.ws-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.ws-nav .navarr{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:22px;color:var(--ink-2);background:var(--surface)}
+.ws-nav .navarr:disabled{opacity:.25}
+.ws-l{display:flex;flex-direction:column;align-items:center;gap:1px;padding:2px 10px}
+.ws-l b{font:500 17px var(--f-head);color:var(--ink)}
+.ws-l small{font:400 12px var(--f-body);color:var(--ink-3)}
+.ws-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.ws-days.sl-l{animation:ws-l .28s var(--ease)}
+.ws-days.sl-r{animation:ws-r .28s var(--ease)}
+@keyframes ws-l{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes ws-r{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+.wsd{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0 9px;border-radius:14px;background:var(--surface);color:var(--ink-2);transition:transform .15s,background .2s}
+.wsd small{font:500 11px var(--f-body);color:var(--ink-3)}
+.wsd b{font:600 16px var(--f-body);font-variant-numeric:tabular-nums}
+.wsd:disabled{cursor:default}
+.wsd.fut{opacity:.35}
+.wsd.t{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.wsd.on{background:var(--accent);color:var(--on-acc)}
+.wsd.on small{color:color-mix(in srgb,var(--on-acc) 65%,transparent)}
+.wsd.on:active{transform:scale(.92)}
+
+/* ---------- Treningi: miniatura mięśni na kafelku ---------- */
+.wc-top{display:flex;align-items:center;gap:12px}
+.wc-map{flex:none;width:72px;margin:-4px 0 -4px -6px}
+.wc-map .bt{display:none}
+.wc-map .bmap{pointer-events:none}
+.wc-main{flex:1;min-width:0}
+.wcard ul{margin-top:10px}
+.wcard.flash{animation:w-flash 1.2s var(--ease)}
+@keyframes w-flash{0%,40%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:0 0 0 2px transparent}}
+.wc-main .wc-d{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}

@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 31;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 32;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -362,13 +362,54 @@
 
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
   const openCards = new Set(); // rozwinięte kafelki treningów
+  // mięśnie, które pracowały w danym treningu (główne mocno, pomocnicze słabiej)
+  function wMuscles(w) {
+    const pr = new Set(), se = new Set();
+    w.ex.forEach(e => { const x = exOf(e); if (x.kind === 'cardio' || !work(e.sets).length) return; (x.primary || []).forEach(m => pr.add(m)); (x.secondary || []).forEach(m => se.add(m)); });
+    return bodyMap([...pr], [...se].filter(m => !pr.has(m)));
+  }
+  // pasek tygodnia: 7 dni, dni z treningiem na żółto; przesunięcie w bok zmienia tydzień
+  let logWeek = null, wsDir = 0;
+  function weekStrip() {
+    const t = todayKey(), cur = weekStart(new Date());
+    if (!logWeek) logWeek = cur;
+    const by = new Map(); finished().forEach(w => { const k = key(new Date(w.start)); by.set(k, (by.get(k) || 0) + 1); });
+    const end = addDays(logWeek, 6), sameM = end.getMonth() === logWeek.getMonth();
+    const lbl = `${logWeek.getDate()}${sameM ? '' : ' ' + MON_S[logWeek.getMonth()]} – ${end.getDate()} ${MON_S[end.getMonth()]}${end.getFullYear() !== new Date().getFullYear() ? ' ' + end.getFullYear() : ''}`;
+    const isNow = key(logWeek) === key(cur);
+    const n = DAYS.reduce((a, _, i) => a + (by.get(key(addDays(logWeek, i))) || 0), 0);
+    const days = DAYS.map((dn, i) => { const d = addDays(logWeek, i), k = key(d), c = by.get(k) || 0; return `<button class="wsd${c ? ' on' : ''}${k === t ? ' t' : ''}${k > t ? ' fut' : ''}" ${c ? `data-wsday="${k}"` : 'disabled'} aria-label="${dn} ${d.getDate()}${c ? ' — trening' : ''}"><small>${dn}</small><b>${d.getDate()}</b></button>`; }).join('');
+    return `<div class="wkstrip" id="wkstrip"><div class="ws-nav"><button class="navarr" data-wsm="-1" aria-label="Poprzedni tydzień">‹</button><button class="ws-l" data-logcal aria-label="Wybierz dzień z kalendarza"><b>${isNow ? 'Ten tydzień' : lbl}</b><small>${n ? `${n} ${plural(n, 'trening', 'treningi', 'treningów')}` : 'bez treningu'}</small></button><button class="navarr" data-wsm="1" aria-label="Następny tydzień" ${isNow ? 'disabled' : ''}>›</button></div><div class="ws-days${wsDir && !calm() ? (wsDir > 0 ? ' sl-l' : ' sl-r') : ''}">${days}</div></div>`;
+  }
+  let wsX = null;
+  tabView.addEventListener('pointerdown', e => { wsX = e.target.closest('#wkstrip') ? { x: e.clientX, y: e.clientY } : null; });
+  tabView.addEventListener('pointerup', e => {
+    if (!wsX) return; const dx = e.clientX - wsX.x, dy = e.clientY - wsX.y; wsX = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { moveWeek(dx < 0 ? 1 : -1); swallowClick(); }
+  });
+  function swallowClick() { const f = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', f, true); setTimeout(() => document.removeEventListener('click', f, true), 50); }
+  function moveWeek(dir) {
+    const nx = addDays(logWeek, dir * 7);
+    if (nx > weekStart(new Date())) return;
+    logWeek = nx; wsDir = dir; $('log-strip').innerHTML = weekStrip(); wsDir = 0;
+  }
+  // dotknięcie dnia: przewinięcie do treningu, rozwinięcie i krótkie podświetlenie
+  function goDay(k) {
+    const ws = finished().filter(w => key(new Date(w.start)) === k); if (!ws.length) return;
+    const idx = finished().indexOf(ws[ws.length - 1]); if (idx >= hLimit) hLimit = idx + 10;
+    ws.forEach(w => openCards.add(w.id)); renderLog();
+    const el = tabView.querySelector(`.wcard[data-day="${k}"]`); if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: calm() ? 'auto' : 'smooth' });
+    tabView.querySelectorAll(`.wcard[data-day="${k}"]`).forEach(c => { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); });
+  }
   function wCard(w, i) {
     const s = wStats(w), open = openCards.has(w.id), n = w.prs?.length || 0;
     const lines = w.ex.map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('');
     const star = n ? `<button class="prstar" data-prstar aria-label="${n} ${plural(n, 'rekord', 'rekordy', 'rekordów')}"><span class="ps-l">${plural(n, 'Rekord', 'Rekordy', 'Rekordów')}</span><span class="ps-i">${STAR}<b>${n}</b></span></button>` : '';
-    return `<div class="wcard${open ? ' open' : ''}" data-wexp="${w.id}" role="button" tabindex="0" aria-expanded="${open}" style="--i:${i}">
+    return `<div class="wcard${open ? ' open' : ''}" data-wexp="${w.id}" data-day="${key(new Date(w.start))}" role="button" tabindex="0" aria-expanded="${open}" style="--i:${i}">
+      <div class="wc-top"><div class="wc-map" aria-hidden="true">${wMuscles(w)}</div><div class="wc-main">
       <div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-dur">${fmtDur(s.ms)}</span></div>
-      <b class="wc-n">${esc(w.name)}</b>
+      <b class="wc-n">${esc(w.name)}</b></div></div>
       ${open ? `<ul>${lines}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button>` : ''}${star}</div>`;
   }
   function renderLog() {
@@ -382,8 +423,9 @@
     }
     if (!all.length) html = emptyCard('Zacznij pierwszy trening', 'Naciśnij +, wybierz plan albo pusty trening i dodawaj serie. Następnym razem ciężary z ostatniego treningu podpowiedzą się same.', '<button class="primary acc" data-start>Nowy trening</button>');
     if (all.length > hLimit) html += '<button class="allweek more" data-more>Pokaż starsze</button>';
-    if (!tabView.querySelector('#w-list')) tabView.innerHTML = `<div id="log-h"></div><div class="wlist" id="w-list"></div>`;
-    $('log-h').innerHTML = head('Treningi', '', finished().length ? `<button class="hbtn cal" data-logcal aria-label="Wybierz dzień z kalendarza">${CAL}</button>` : '');
+    if (!tabView.querySelector('#w-list')) tabView.innerHTML = `<div id="log-h"></div><div id="log-strip"></div><div class="wlist" id="w-list"></div>`;
+    $('log-h').innerHTML = head('Treningi');
+    $('log-strip').innerHTML = all.length ? weekStrip() : '';
     const list = $('w-list'); list.className = 'wlist' + (animTab ? ' enter' : ''); list.innerHTML = html;
   }
 
@@ -1095,7 +1137,7 @@
     const now = new Date(), isNow = y === now.getFullYear() && mo === now.getMonth();
     overlay.innerHTML = sheet('Wybierz dzień', 'Podświetlone dni to treningi', `<div class="calnav big"><button class="navarr" data-pickm="-1" aria-label="Poprzedni miesiąc">‹</button><b>${MONTHS[mo]} ${y}</b><button class="navarr" data-pickm="1" aria-label="Następny miesiąc" ${isNow ? 'disabled' : ''}>›</button></div><div class="calg">${DAYS.map(d => `<span class="cdh">${d}</span>`).join('')}${cells}</div>`, 'Kalendarz treningów');
     overlay.querySelectorAll('[data-pickm]').forEach(b => b.addEventListener('click', () => { pickMonth = new Date(y, mo + +b.dataset.pickm, 1); openLogCal(); }));
-    overlay.querySelectorAll('[data-pickday]').forEach(b => b.addEventListener('click', () => { close(); openDay(b.dataset.pickday); }));
+    overlay.querySelectorAll('[data-pickday]').forEach(b => b.addEventListener('click', () => { close(); const [yy, mm, dd] = b.dataset.pickday.split('-').map(Number); logWeek = weekStart(new Date(yy, mm - 1, dd)); goDay(b.dataset.pickday); }));
   }
   function openDay(k) {
     const ws = finished().filter(w => key(new Date(w.start)) === k);
@@ -1315,7 +1357,9 @@
     if (T('[data-addex]')) { openPicker('workout'); return; }
     // listy i szczegóły
     if ((b = T('[data-prstar]'))) { const st = b; st.classList.add('open'); clearTimeout(st._t); st._t = setTimeout(() => st.classList.remove('open'), 2000); return; }
-    if (T('[data-logcal]')) { pickMonth = null; openLogCal(); return; }
+    if (T('[data-logcal]')) { pickMonth = logWeek ? new Date(logWeek.getFullYear(), logWeek.getMonth(), 1) : null; openLogCal(); return; }
+    if ((b = T('[data-wsm]'))) { moveWeek(+b.dataset.wsm); return; }
+    if ((b = T('[data-wsday]'))) { goDay(b.dataset.wsday); return; }
     if ((b = T('[data-w]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1); pushDetail({ type: 'w', id: b.dataset.w }); return; }
     if ((b = T('[data-wexp]'))) { const id = b.dataset.wexp; if (openCards.has(id)) openCards.delete(id); else openCards.add(id); renderLog(); return; }
     if ((b = T('[data-wmenu]'))) { workoutActions(b.dataset.wmenu); return; }
