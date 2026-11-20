@@ -1136,3 +1136,27 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 .scrim{background:rgba(0,0,0,.55)}
 /* Inter jest szerszy niż Outfit — przyciski w jednej linii */
 .ra-yes,.fin,.lv-go,.go,.adds,.allweek,.mchips button,.smode button{white-space:nowrap}
+/* Treningi: kafelek z „Rozpoczęto / Łącznie”, ćwiczenia po rozwinięciu, gwiazdka rekordu z liczbą */
+.wcard{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.wcard .wc-h{align-items:center;min-height:28px}
+.wc-n{margin:2px 0 6px}
+.wc-t{display:flex;flex-direction:column;gap:2px;font:400 13px var(--f-body);color:var(--ink-3);white-space:normal}
+.wc-t b{color:var(--ink-2);font-weight:500}
+.wcard ul{margin-top:12px;padding-top:8px;border-top:1px solid var(--line);animation:rise .25s var(--ease)}
+.wcard:not(.open) .wc-t::after{content:"";display:block}
+.wc-more{display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:var(--accent);font-weight:600;font-size:14px}
+.wc-more svg{color:var(--accent)}
+.hbtn.cal{color:var(--ink-2)}
+.hbtn.cal:hover{color:var(--ink)}
+/* gwiazdka z liczbą rekordów; po dotknięciu od lewej wysuwa się napis */
+.prstar{display:inline-flex;align-items:center;flex:none;margin-right:-4px}
+.ps-i{position:relative;width:34px;height:34px;display:grid;place-items:center;color:var(--accent)}
+.ps-i svg{width:30px;height:30px}
+.ps-i b{position:absolute;inset:0;display:grid;place-items:center;padding-top:3px;font:700 11px var(--f-body);color:var(--on-acc);font-variant-numeric:tabular-nums}
+.ps-l{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transform:translateX(10px);font-weight:600;font-size:12.5px;color:var(--accent);transition:max-width .25s var(--ease),opacity .2s,transform .25s var(--ease)}
+.prstar.open .ps-l{max-width:120px;opacity:1;transform:none;margin-right:4px}
+/* kalendarz do wybrania dnia treningu */
+.calnav.big{justify-content:space-between;width:100%}
+.calnav.big b{font-size:16px}
+.sheet .calg{gap:6px}
+.sheet .cday{max-width:44px}

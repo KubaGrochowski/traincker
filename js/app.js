@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 28;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 29;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -109,7 +109,7 @@
 
   // nawigacja jak w aplikacji na telefon: zakładki na dole, trening jako osobny ekran, szczegóły nakładane na wierzch
   let tab = 'log', wOpen = !!state.active, stack = [], animTab = true;
-  let hQuery = '', hLimit = 25, pWeeks = 8, calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  let hLimit = 25, pWeeks = 8, calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   try { const v = localStorage.getItem('ggym.tab'); if (['log', 'routines', 'progress'].includes(v)) tab = v; } catch (_) { }
   const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -242,10 +242,11 @@
   const STARS = '<svg width="11" height="11" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8l2.5 5.3 5.8.7-4.3 4 1.1 5.7L10 14.7l-5.1 2.8L6 11.8l-4.3-4 5.8-.7z" fill="currentColor"/></svg>';
   const AGAIN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const STOP = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="5" y="5" width="12" height="12" rx="2.5" fill="currentColor"/></svg>';
-  const GEAR = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.9"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  const GEAR = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10.3 2.8h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.3 0 1.9l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8c-.1-.6-.1-1.3 0-1.9l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/></svg>';
   const FLAG_PL = '<svg class="flag" width="26" height="18" viewBox="0 0 26 18" aria-hidden="true"><rect width="26" height="9" fill="#fff"/><rect y="9" width="26" height="9" fill="#DC143C"/></svg>';
   const FLAG_GB = '<svg class="flag" width="26" height="18" viewBox="0 0 60 36" aria-hidden="true"><rect width="60" height="36" fill="#012169"/><path d="M0 0l60 36M60 0L0 36" stroke="#fff" stroke-width="7"/><path d="M0 0l60 36M60 0L0 36" stroke="#C8102E" stroke-width="3"/><path d="M30 0v36M0 18h60" stroke="#fff" stroke-width="11"/><path d="M30 0v36M0 18h60" stroke="#C8102E" stroke-width="6"/></svg>';
   const GRIP = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const CAL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 3v4M16 3v4M3.5 10h17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="7" y="13" width="3" height="3" rx=".8" fill="currentColor"/></svg>';
   const PLAY = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.8v12.4L16 10z" fill="currentColor"/></svg>';
 
   const $ = id => document.getElementById(id);
@@ -360,13 +361,19 @@
   const elapsed = () => state.active ? fmtSec((Date.now() - state.active.start) / 1000) : '0:00';
 
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
+  const openCards = new Set(); // rozwinięte kafelki treningów
   function wCard(w, i) {
-    const s = wStats(w), lines = w.ex.slice(0, 7).map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('') + (w.ex.length > 7 ? `<li class="more"><span>i ${w.ex.length - 7} więcej…</span></li>` : '');
-    return `<button class="wcard" data-w="${w.id}" style="--i:${i}"><div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span><span class="wc-t">${hhmm(w.start)} · ${fmtDur(s.ms)}</span></div><b class="wc-n">${esc(w.name)}</b><ul>${lines}</ul>${w.prs?.length ? `<div class="wc-f"><span class="pr">${STARS} ${w.prs.length} ${plural(w.prs.length, 'rekord', 'rekordy', 'rekordów')}</span></div>` : ''}</button>`;
+    const s = wStats(w), open = openCards.has(w.id), n = w.prs?.length || 0;
+    const lines = w.ex.map(e => `<li${e.sup ? ' class="ss"' : ''}><span>${esc(exOf(e).name)}</span><b>${esc(exLine(e))}</b></li>`).join('');
+    const star = n ? `<button class="prstar" data-prstar aria-label="${n} ${plural(n, 'rekord', 'rekordy', 'rekordów')}"><span class="ps-l">${plural(n, 'Rekord', 'Rekordy', 'Rekordów')}</span><span class="ps-i">${STAR}<b>${n}</b></span></button>` : '';
+    return `<div class="wcard${open ? ' open' : ''}" data-wexp="${w.id}" role="button" tabindex="0" aria-expanded="${open}" style="--i:${i}">
+      <div class="wc-h"><span class="wc-d">${dateLabel(w.start)}</span>${star}</div>
+      <b class="wc-n">${esc(w.name)}</b>
+      <div class="wc-t"><span>Rozpoczęto: <b>${hhmm(w.start)}</b></span><span>Łącznie: <b>${fmtDur(s.ms)}</b></span></div>
+      ${open ? `<ul>${lines}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button>` : ''}</div>`;
   }
   function renderLog() {
-    const q = norm(hQuery.trim());
-    const all = finished().filter(w => !q || norm(w.name).includes(q) || w.ex.some(e => norm(exOf(e).name).includes(q)));
+    const all = finished();
     let html = '', i = 0, n = 0, lastM = '';
     for (const w of all) {
       if (n >= hLimit) break;
@@ -374,10 +381,10 @@
       if (m !== lastM) { const cnt = all.filter(x => { const y = new Date(x.start); return y.getMonth() === d.getMonth() && y.getFullYear() === d.getFullYear(); }).length; html += `<div class="grp" style="--i:${i++}"><h3>${m}</h3><em>${cnt} ${plural(cnt, 'trening', 'treningi', 'treningów')}</em></div>`; lastM = m; }
       html += wCard(w, i++); n++;
     }
-    if (!all.length) html = q ? '<p class="empty">Nic nie pasuje do wyszukiwania</p>' : emptyCard('Zacznij pierwszy trening', 'Naciśnij +, wybierz plan albo pusty trening i dodawaj serie. Następnym razem ciężary z ostatniego treningu podpowiedzą się same.', '<button class="primary acc" data-start>Nowy trening</button>');
+    if (!all.length) html = emptyCard('Zacznij pierwszy trening', 'Naciśnij +, wybierz plan albo pusty trening i dodawaj serie. Następnym razem ciężary z ostatniego treningu podpowiedzą się same.', '<button class="primary acc" data-start>Nowy trening</button>');
     if (all.length > hLimit) html += '<button class="allweek more" data-more>Pokaż starsze</button>';
-    if (!tabView.querySelector('#h-q') || (all.length && tabView.querySelector('span#h-q'))) tabView.innerHTML = `<div id="log-h"></div>${finished().length ? `<label class="hsearch">${SEARCH}<input id="h-q" type="search" placeholder="Szukaj treningu lub ćwiczenia" autocomplete="off"></label>` : '<span id="h-q" hidden></span>'}<div class="wlist" id="w-list"></div>`;
-    $('log-h').innerHTML = head('Treningi', '');
+    if (!tabView.querySelector('#w-list')) tabView.innerHTML = `<div id="log-h"></div><div class="wlist" id="w-list"></div>`;
+    $('log-h').innerHTML = head('Treningi', '', finished().length ? `<button class="hbtn cal" data-logcal aria-label="Wybierz dzień z kalendarza">${CAL}</button>` : '');
     const list = $('w-list'); list.className = 'wlist' + (animTab ? ' enter' : ''); list.innerHTML = html;
   }
 
@@ -1079,6 +1086,19 @@
     return `<header><div><h3>Kalendarz</h3><small><b>${cnt}</b> ${plural(cnt, 'trening', 'treningi', 'treningów')} w miesiącu</small></div><div class="calnav"><button class="navarr" data-cal="-1" aria-label="Poprzedni miesiąc">‹</button><b>${MONTHS[mo]} ${y}</b><button class="navarr" data-cal="1" aria-label="Następny miesiąc" ${isNow ? 'disabled' : ''}>›</button></div></header>
       <div class="calg">${DAYS.map(d => `<span class="cdh">${d}</span>`).join('')}${cells}</div>`;
   }
+  let pickMonth = null;
+  function openLogCal() {
+    if (!pickMonth) { const l = finished()[0]; const d = l ? new Date(l.start) : new Date(); pickMonth = new Date(d.getFullYear(), d.getMonth(), 1); }
+    const y = pickMonth.getFullYear(), mo = pickMonth.getMonth(), first = new Date(y, mo, 1), n = new Date(y, mo + 1, 0).getDate(), t = todayKey();
+    const by = new Map(); finished().forEach(w => { const k = key(new Date(w.start)); by.set(k, (by.get(k) || 0) + 1); });
+    let cells = '';
+    for (let i = 0; i < dow(first); i++) cells += '<span class="cday blank"></span>';
+    for (let d = 1; d <= n; d++) { const k = key(new Date(y, mo, d)), c = by.get(k) || 0; cells += `<button class="cday${c ? ' on' : ''}${k === t ? ' t' : ''}${k > t ? ' fut' : ''}" ${c ? `data-pickday="${k}"` : 'disabled'}>${d}</button>`; }
+    const now = new Date(), isNow = y === now.getFullYear() && mo === now.getMonth();
+    overlay.innerHTML = sheet('Wybierz dzień', 'Podświetlone dni to treningi', `<div class="calnav big"><button class="navarr" data-pickm="-1" aria-label="Poprzedni miesiąc">‹</button><b>${MONTHS[mo]} ${y}</b><button class="navarr" data-pickm="1" aria-label="Następny miesiąc" ${isNow ? 'disabled' : ''}>›</button></div><div class="calg">${DAYS.map(d => `<span class="cdh">${d}</span>`).join('')}${cells}</div>`, 'Kalendarz treningów');
+    overlay.querySelectorAll('[data-pickm]').forEach(b => b.addEventListener('click', () => { pickMonth = new Date(y, mo + +b.dataset.pickm, 1); openLogCal(); }));
+    overlay.querySelectorAll('[data-pickday]').forEach(b => b.addEventListener('click', () => { close(); openDay(b.dataset.pickday); }));
+  }
   function openDay(k) {
     const ws = finished().filter(w => key(new Date(w.start)) === k);
     if (ws.length === 1) { pushDetail({ type: 'w', id: ws[0].id }); return; }
@@ -1298,7 +1318,10 @@
     if ((b = T('[data-exinfo]'))) { pushDetail({ type: 'ex', eid: b.dataset.exinfo, tab: b.dataset.xt || 'hist' }); return; }
     if (T('[data-addex]')) { openPicker('workout'); return; }
     // listy i szczegóły
+    if ((b = T('[data-prstar]'))) { b.classList.toggle('open'); return; }
+    if (T('[data-logcal]')) { pickMonth = null; openLogCal(); return; }
     if ((b = T('[data-w]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1); pushDetail({ type: 'w', id: b.dataset.w }); return; }
+    if ((b = T('[data-wexp]'))) { const id = b.dataset.wexp; if (openCards.has(id)) openCards.delete(id); else openCards.add(id); renderLog(); return; }
     if ((b = T('[data-wmenu]'))) { workoutActions(b.dataset.wmenu); return; }
     if ((b = T('[data-wprs]'))) { const w = state.workouts[b.dataset.wprs]; if (w?.prs?.length) openPRs(w); return; }
     if ((b = T('[data-repeat]'))) { const w = state.workouts[b.dataset.repeat]; if (w) startWorkout({ name: w.name, rid: w.rid, ex: w.ex.map(e => ({ eid: e.eid, sup: e.sup, note: e.note, tg: e.sets })) }); return; }
@@ -1340,7 +1363,6 @@
   });
   document.addEventListener('input', e => {
     const t = e.target;
-    if (t.id === 'h-q') { hQuery = t.value; hLimit = 25; renderLog(); return; }
     if (t.matches('[data-rname]') || t.matches('[data-rnote]')) { const r = state.routines[stack[stack.length - 1]?.id]; if (!r) return; if (t.matches('[data-rname]')) { r.name = t.value; const h = dtLayer.querySelector('h1.big'); if (h) h.textContent = t.value || 'Plan'; } else r.note = t.value; save(); return; }
     const a = state.active; if (!a || !t.closest('#wk-layer')) return;
     if (t.id === 'w-name') { a.name = t.value; save(); return; }
