@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 37;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 41;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -272,66 +272,13 @@
   };
 
   /* ---------- mapa mięśni: sylwetka z przodu i z tyłu, mięśnie główne i pomocnicze ---------- */
-  // kształty lewej połowy (patrząc na rysunek), druga połowa to odbicie; „c” = kształt na środku ciała (bez odbicia)
-  const BODY = {
-    front: {
-      sil: ['M36 36 L50 32 L50 100 L35 100 C33 88 34 68 36 54 Z', 'M38 88 L50 90 L50 102 L40 98 Z', 'M42 148 L47.5 148 C47.5 162 46.5 172 45.5 180 L42 180 Z', 'M37 180 L46 180 L48 188 L35 188 Z'],
-      silC: ['M41 8 C41 2 59 2 59 8 L59 20 C59 26 41 26 41 20 Z'],
-      joints: [[27, 69, 3.6], [20, 96, 3.6], [42, 145, 5]],
-      m: {
-        traps: ['M44 30 L44 35 L34 36 C37 33 40 31 44 30 Z'],
-        shoulders: ['M34 35 C27 35 22 40 22 48 C22 51 24 52 26 51 C28 47 31 43 36 40 L37 37 Z'],
-        chest: ['M50 37 L50 55 C45 57 39 56 35 52 C33 48 34 43 37 39 L39 37 Z'],
-        biceps: ['M27 52 C24 55 23 61 24 67 C26 69 29 68 30 65 C31 60 31 55 30 52 Z'],
-        forearms: ['M24 71 C21 77 19 84 19 91 C21 92 23 92 24 91 C26 84 28 77 29 72 Z'],
-        abdominals: ['M36 56 C35 64 36 74 38 84 L43 88 L43 58 Z'],
-        quadriceps: ['M35 100 C34 112 35 126 38 140 L46 141 C47 128 48 114 47 101 L42 92 L39 92 Z'],
-        abductors: ['M35 86 C33 90 33 96 34 101 L38 98 L39 90 Z'],
-        adductors: ['M47 98 L50 100 L50 124 C48 120 47 110 47 100 Z'],
-        calves: ['M35.5 150 C33.5 158 34.5 168 37.5 178 L42 178 C42.5 168 43 158 43 150 Z'],
-      },
-      c: {
-        neck: ['M45 24 L55 24 L56 33 L44 33 Z'],
-        abdominals: ['M44 57 L56 57 L56 88 C54 92 46 92 44 88 Z'],
-      },
-      lines: ['M50 60 L50 88', 'M44 66 L56 66', 'M44 75 L56 75'],
-    },
-    back: {
-      sil: ['M36 36 L50 30 L50 104 L35 104 C33 90 34 70 36 54 Z', 'M41 148 L47 148 C47 160 46 170 45 178 L41 178 Z', 'M37 178 L46 178 L48 188 L35 188 Z'],
-      silC: ['M41 8 C41 2 59 2 59 8 L59 20 C59 26 41 26 41 20 Z', 'M45 22 L55 22 L56 30 L44 30 Z'],
-      joints: [[27, 69, 3.6], [20, 96, 3.6], [42, 146, 5]],
-      m: {
-        traps: ['M46 24 L50 24 L50 52 C47 48 43 43 40 39 L34 36 C38 33 43 30 46 24 Z'],
-        shoulders: ['M34 35 C27 35 22 40 22 48 C22 51 24 52 26 51 C28 47 31 43 36 40 L37 37 Z'],
-        'middle back': ['M40 40 C44 44 47 48 50 53 L50 63 C46 61 43 57 41 51 Z'],
-        lats: ['M36 42 C34 52 35 62 39 72 L46 78 C45 70 43 62 41 53 C40 48 38 45 37 41 Z'],
-        'lower back': ['M50 64 L50 88 L45 88 C44 82 44 74 46 69 C47 66 48 65 50 64 Z'],
-        triceps: ['M27 51 C24 54 23 60 24 66 C26 68 29 67 30 64 C31 59 31 54 30 51 Z'],
-        forearms: ['M24 71 C21 77 19 84 19 91 C21 92 23 92 24 91 C26 84 28 77 29 72 Z'],
-        glutes: ['M50 90 L50 110 C45 112 39 110 36 104 C35 97 37 92 42 90 Z'],
-        abductors: ['M43 86 C38 86 35 88 35 93 C36 96 37 96 38 95 C39 92 41 90 45 89 Z'],
-        hamstrings: ['M36 108 C35 120 37 132 40 142 L46 142 C47 132 48 120 48 112 C44 113 40 112 36 108 Z'],
-        adductors: ['M48 112 L50 112 L50 130 C49 124 48 118 48 112 Z'],
-        calves: ['M37 150 C35 158 36 168 40 176 L45 176 C47 168 47 158 46 150 C43 148 40 148 37 150 Z'],
-      },
-      c: {},
-      lines: ['M50 28 L50 88'],
-    },
-  };
-  const MIR = 'matrix(-1 0 0 1 100 0)';
-  // lvl: mięsień → 1 (główny), 0.5 (pomocniczy) albo dowolna wartość 0–1 (mapa cieplna w Postępach)
-  function figure(side, lvl, x0) {
-    const B = BODY[side], both = d => `<path d="${d}"/><path d="${d}" transform="${MIR}"/>`;
-    const fillOf = m => { const v = lvl[m] || 0; return v ? ` style="--v:${Math.min(1, v).toFixed(2)}" class="mu on"` : ' class="mu"'; };
-    let sil = B.sil.map(both).join('') + B.silC.map(d => `<path d="${d}"/>`).join('') + B.joints.map(([cx, cy, r]) => `<circle cx="${cx}" cy="${cy}" r="${r}"/><circle cx="${100 - cx}" cy="${cy}" r="${r}"/>`).join('');
-    Object.values(B.m).flat().forEach(d => { sil += both(d); }); Object.values(B.c).flat().forEach(d => { sil += `<path d="${d}"/>`; });
-    const mus = Object.entries(B.m).map(([m, ds]) => `<g${fillOf(m)} data-m="${m}">${ds.map(both).join('')}</g>`).join('') + Object.entries(B.c).map(([m, ds]) => `<g${fillOf(m)} data-m="${m}">${ds.map(d => `<path d="${d}"/>`).join('')}</g>`).join('');
-    return `<g transform="translate(${x0} 0)"><g class="sil">${sil}</g>${mus}<g class="ln">${B.lines.map(d => `<path d="${d}"/>`).join('')}</g></g>`;
-  }
+  const SEX_COL = { m: '#4F8EF7', f: '#F06BAA' };
+  const sexOf = () => state.settings.sex === 'f' ? 'f' : 'm';
   function bodyMap(primary = [], secondary = [], heat) {
     const lvl = {};
     if (heat) Object.assign(lvl, heat); else { secondary.forEach(m => { lvl[m] = .45; }); primary.forEach(m => { lvl[m] = 1; }); }
-    return `<svg class="bmap${heat ? ' heat' : ''}" viewBox="0 0 220 196" role="img" aria-label="Mapa mięśni">${figure('front', lvl, 2)}${figure('back', lvl, 118)}<text x="52" y="195" class="bt">przód</text><text x="168" y="195" class="bt">tył</text></svg>`;
+    const sx = sexOf();
+    return `<svg class="bmap${heat ? ' heat' : ''}" viewBox="0 0 240 246" style="--mc:${SEX_COL[sx]}" role="img" aria-label="Mapa mięśni — przód i tył">${window.drawBody('front', lvl, sx, 0)}${window.drawBody('back', lvl, sx, 120)}</svg>`;
   }
 
   /* ================= rysowanie ================= */
@@ -362,7 +309,7 @@
 
   /* ----- Treningi (dziennik, jak główny ekran RepCount) ----- */
   // Treningi: pasek tygodnia → duża obracana sylwetka z ćwiczonymi partiami → co było ćwiczone (rekordy na żółto)
-  let logWeek = null, logDay = null, wsDir = 0, figAng = 0, figTouched = false;
+  let logWeek = null, logDay = null, wsDir = 0;
   const dayWs = k => finished().filter(w => key(new Date(w.start)) === k).reverse();
   const keyDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
   function weekStrip() {
@@ -382,19 +329,9 @@
     const lvl = {}; se.forEach(m => { lvl[m] = .45; }); pr.forEach(m => { lvl[m] = 1; });
     return { lvl, pr: [...pr] };
   }
-  const sideOf = a => (((Math.round(a / 180)) % 2) + 2) % 2 ? 'Tył' : 'Przód';
-  const ROT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const FIG_D = 18; // pół grubości ciała (px)
   function figHtml(m) {
-    if (window.Body3D?.ok) return `<div class="figbox"><div class="fig3d gl" id="fig3d" aria-label="Model 3D — przesuń palcem, żeby obrócić"></div><p class="fmus" id="fmus">${m.pr.map(x => muscleName(x)).join(' · ')}</p></div>`;
-    const shd = id => `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset=".32" stop-color="#fff" stop-opacity=".12"/><stop offset=".55" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient></defs>`;
-    const face = side => { const id = 'shd-' + side; return `<div class="fface ${side}"><svg class="bmap big" viewBox="0 0 100 192" role="img" aria-label="${side === 'front' ? 'Przód' : 'Tył'} — ćwiczone partie">${shd(id)}${figure(side, m.lvl, 0)}<g class="shade" style="--shd:url(#${id})">${figure(side, {}, 0)}</g></svg></div>`; };
-    let slabs = '';
-    for (let z = -FIG_D + 1.5; z < FIG_D; z += 1.5) slabs += `<div class="fslab" style="transform:translateZ(${z.toFixed(1)}px) scale(${(.92 + .08 * Math.sqrt(1 - (z / FIG_D) ** 2)).toFixed(3)})"><svg viewBox="0 0 100 192" aria-hidden="true">${figure('front', {}, 0)}</svg></div>`;
-    return `<div class="figbox"><div class="fig3d${figTouched || calm() ? '' : ' idle'}" id="fig3d" aria-label="Sylwetka — przesuń palcem, żeby obrócić"><div class="fspin"><div class="frot" id="frot" style="transform:rotateY(${figAng}deg);--lit:${lit(figAng)}">${slabs}${face('front')}${face('back')}</div></div></div>
-      <p class="fmus" id="fmus">${m.pr.map(x => muscleName(x)).join(' · ')}</p></div>`;
+    return `<div class="figbox"><div class="fig2" id="fig2">${bodyMap([], [], m.lvl)}</div><p class="fmus" id="fmus">${m.pr.map(x => muscleName(x)).join(' · ')}</p></div>`;
   }
-  const lit = a => (.55 + .45 * Math.abs(Math.cos(a * Math.PI / 180))).toFixed(3);
   function dayDetail(ws) {
     if (!ws.length) return '<p class="empty dd-none">W tym tygodniu nie było treningu</p>';
     return ws.map(w => {
@@ -408,20 +345,16 @@
         <ul class="dxl">${ex}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button></section>`;
     }).join('');
   }
-  // zmiana dnia: partie na sylwetce przechodzą płynnie, obrót zostaje
+  // zmiana dnia: partie na sylwetkach przechodzą płynnie
   function drawDay(anim) {
-    const ws = logDay ? dayWs(logDay) : [], m = musOf(ws), rot = $('frot');
-    const gl = $('fig3d')?.classList.contains('gl');
-    if (gl) { window.Body3D.set(m.lvl); $('fmus').textContent = m.pr.map(x => muscleName(x)).join(' · '); }
-    else if (rot) {
-      rot.querySelectorAll('g[data-m]').forEach(g => { const v = m.lvl[g.dataset.m] || 0; g.classList.toggle('on', !!v); if (v) g.style.setProperty('--v', v); else g.style.removeProperty('--v'); });
+    const ws = logDay ? dayWs(logDay) : [], m = musOf(ws), fig = $('fig2');
+    if (fig && fig.dataset.sex === sexOf()) {
+      fig.querySelectorAll('g[data-m]').forEach(g => { const v = m.lvl[g.dataset.m] || 0; g.classList.toggle('on', !!v); if (v) g.style.setProperty('--v', Math.min(1, v).toFixed(2)); else g.style.removeProperty('--v'); });
       $('fmus').textContent = m.pr.map(x => muscleName(x)).join(' · ');
-    } else { $('log-fig').innerHTML = figHtml(m); if ($('fig3d')?.classList.contains('gl')) window.Body3D.mount($('fig3d'), m.lvl); }
+    } else { $('log-fig').innerHTML = figHtml(m); $('fig2').dataset.sex = sexOf(); }
     $('log-day').innerHTML = dayDetail(ws);
     if (anim && !calm()) $('log-day').animate({ opacity: [0, 1], transform: ['translateY(8px)', 'none'] }, { duration: 260, easing: 'ease-out' });
   }
-  // model 3D ładuje się jako moduł — gdy będzie gotowy, podmień płaską sylwetkę
-  addEventListener('body3d-ready', () => { if (window.Body3D?.ok && tab === 'log' && $('log-fig')) { $('log-fig').innerHTML = ''; drawDay(); } });
   function selectDay(k) {
     logDay = k; logWeek = weekStart(keyDate(k));
     $('log-strip').innerHTML = weekStrip(); drawDay(true);
@@ -434,31 +367,14 @@
     logDay = inWk ? key(new Date(inWk.start)) : '';
     $('log-strip').innerHTML = weekStrip(); wsDir = 0; drawDay(true);
   }
-  // przesunięcie palcem: po pasku zmienia tydzień, po sylwetce ją obraca (dotknięcie = pół obrotu)
-  let wsX = null, fg = null;
-  function setFig(a, drag) { const r = $('frot'); if (!r) return; r.classList.toggle('drag', !!drag); r.style.transform = `rotateY(${a}deg)`; r.style.setProperty('--lit', lit(a)); }
-  tabView.addEventListener('pointerdown', e => {
-    wsX = e.target.closest('#wkstrip') ? { x: e.clientX, y: e.clientY } : null;
-    fg = e.target.closest('#fig3d') ? { x: e.clientX, y: e.clientY, a: figAng, moved: false, lx: e.clientX, lt: e.timeStamp, v: 0 } : null;
-    if (fg && !figTouched) { figTouched = true; $('fig3d')?.classList.remove('idle'); }
-  });
-  tabView.addEventListener('pointermove', e => {
-    if (!fg) return; const dx = e.clientX - fg.x;
-    if (!fg.moved && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(e.clientY - fg.y)) fg.moved = true;
-    if (fg.moved) { const dt = Math.max(1, e.timeStamp - fg.lt); fg.v = fg.v * .5 + ((e.clientX - fg.lx) / dt) * .5; fg.lx = e.clientX; fg.lt = e.timeStamp; setFig(fg.a + dx * .8, true); }
-  });
-  const figEnd = e => {
-    if (!fg) return; const dx = e.clientX - fg.x;
-    if (!fg.moved) { fg = null; return; }
-    figAng = Math.round((fg.a + dx * .8 + Math.max(-1.5, Math.min(1.5, fg.v)) * 160) / 180) * 180; // szybki ruch palcem = pełniejszy obrót
-    fg = null; setFig(figAng); swallowClick();
-  };
+  // przesunięcie palcem po pasku zmienia tydzień
+  let wsX = null;
+  tabView.addEventListener('pointerdown', e => { wsX = e.target.closest('#wkstrip') ? { x: e.clientX, y: e.clientY } : null; });
   tabView.addEventListener('pointerup', e => {
-    figEnd(e);
     if (!wsX) return; const dx = e.clientX - wsX.x, dy = e.clientY - wsX.y; wsX = null;
     if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { moveWeek(dx < 0 ? 1 : -1); swallowClick(); }
   });
-  tabView.addEventListener('pointercancel', () => { if (fg) { setFig(figAng); fg = null; } wsX = null; });
+  tabView.addEventListener('pointercancel', () => { wsX = null; });
   function swallowClick() { const f = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', f, true); setTimeout(() => document.removeEventListener('click', f, true), 50); }
   function renderLog() {
     const all = finished();
@@ -1194,6 +1110,7 @@
     return `${dtBar('Ustawienia')}<div class="dt-body"><h1 class="big">Ustawienia</h1>
       <div class="ilist">
         <div class="irow static"><span class="ir-t"><b>Nazwy ćwiczeń</b></span><span class="smode u2 lang"><button data-lang="pl" class="${s.lang !== 'en' ? 'on' : ''}" aria-label="Polski">${FLAG_PL}</button><button data-lang="en" class="${s.lang === 'en' ? 'on' : ''}" aria-label="English">${FLAG_GB}</button></span></div>
+        <div class="irow static"><span class="ir-t"><b>Sylwetka</b></span><span class="smode u2 sex"><button data-sex="m" class="m${sexOf() === 'm' ? ' on' : ''}">Mężczyzna</button><button data-sex="f" class="f${sexOf() === 'f' ? ' on' : ''}">Kobieta</button></span></div>
         <div class="irow static"><span class="ir-t"><b>Jednostka</b></span><span class="smode u2"><button data-unit="kg" class="${s.unit !== 'lb' ? 'on' : ''}">kg</button><button data-unit="lb" class="${s.unit === 'lb' ? 'on' : ''}">lb</button></span></div>
         <div class="irow static"><span class="ir-t"><b>Przerwa</b></span><span class="smode u3">${REST_OPTS.map(o => `<button data-rest-set="${o}" class="${s.rest === o ? 'on' : ''}">${fmtSec(o)}</button>`).join('')}</span></div>
       </div>
@@ -1337,7 +1254,15 @@
     $('app-main').hidden = !logged;
     document.body.classList.toggle('gate', !logged);
     if (!logged) { close(); wkLayer.hidden = true; dtLayer.hidden = true; if (matchMedia('(hover: hover)').matches && !document.activeElement?.closest('#auth')) $('a-email').focus(); }
-    else render();
+    else { render(); if (!state.settings.sex) setTimeout(askSex, 500); }
+  }
+  // pierwsze uruchomienie: wybór sylwetki (mięśnie niebieskie albo różowe)
+  function askSex() {
+    if (state.settings.sex || overlay.innerHTML) return;
+    const demo = { chest: 1, shoulders: 1, biceps: .45, abdominals: .45, quadriceps: 1 };
+    const opt = (sx, label) => `<button class="sexpick ${sx}" data-pick-sex="${sx}"><svg class="bmap" viewBox="0 0 120 246" style="--mc:${SEX_COL[sx]}" aria-hidden="true">${window.drawBody('front', demo, sx, 0)}</svg><b>${label}</b></button>`;
+    overlay.innerHTML = sheet('Wybierz sylwetkę', 'Możesz to zmienić w ustawieniach', `<div class="sexrow">${opt('m', 'Mężczyzna')}${opt('f', 'Kobieta')}</div>`, 'Wybór sylwetki');
+    overlay.querySelectorAll('[data-pick-sex]').forEach(b => b.addEventListener('click', () => { state.settings.sex = b.dataset.pickSex; save(); close(); render(); }));
   }
   function authError(err) {
     const m = (err?.message || '').toLowerCase(), c = err?.code || '';
@@ -1430,6 +1355,7 @@
     if (T('[data-settings]')) { pushDetail({ type: 'settings' }); return; }
     if ((b = T('[data-lang]'))) { state.settings.lang = b.dataset.lang; applyLang(); save(); render(); return; }
     // ustawienia
+    if ((b = T('[data-sex]'))) { state.settings.sex = b.dataset.sex; save(); render(); return; }
     if ((b = T('[data-unit]'))) { state.settings.unit = b.dataset.unit; save(); render(); return; }
     if ((b = T('[data-rest-set]'))) { state.settings.rest = +b.dataset.restSet; save(); render(); return; }
     if (T('[data-logout]')) { confirmLogout(); return; }

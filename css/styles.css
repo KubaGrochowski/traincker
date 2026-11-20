@@ -1284,3 +1284,24 @@ h1,h2,h3,.wname,.wc-n,.exn b,.auth-brand h1,.sheet-h h2,h1.big,.scr-t h1{font-fa
 .fig3d.gl{width:220px;height:330px;perspective:none;filter:none;position:relative;cursor:grab}
 .fig3d.gl canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:pan-y}
 .fig3d.gl::after{content:"";position:absolute;left:50%;bottom:6px;width:120px;height:18px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent)}
+
+/* ---------- sylwetki 2D z mięśniami (męska niebieska / kobieca różowa) ---------- */
+.fig2{width:100%;max-width:330px;margin:0 auto}
+.bmap .sil path,.bmap .sil ellipse{fill:#2B2B2F;stroke:#2B2B2F;stroke-width:1.6;stroke-linejoin:round}
+.bmap .sil .lb path{fill:none;stroke:#2B2B2F;stroke-linecap:round}
+.bmap .mu,.bmap .mz{fill:#4A4A50;stroke:#1C1C1E;stroke-width:.55;stroke-linejoin:round;transition:fill .45s ease}
+.bmap .mz{fill:#424247}
+.bmap .mu.on,.bmap.heat .mu.on,.bmap .mu.on[style*="--v:1.00"]{fill:color-mix(in srgb,var(--mc) calc(var(--v,1)*100%),#4A4A50)}
+.bmap path.fb{fill:none!important;stroke:rgba(0,0,0,.32);stroke-width:.35;pointer-events:none}
+.bmap .mu.on path.fb{stroke:rgba(0,0,0,.22)}
+.bmap .hair{fill:#3A2A22;stroke:#1C1C1E;stroke-width:.4}
+.bmap .body.f .hair{fill:#5A3826}
+.smode.sex button{padding:0 12px;width:auto}
+.smode.sex button.m.on{background:#4F8EF7;color:#fff;border-color:#4F8EF7}
+.smode.sex button.f.on{background:#F06BAA;color:#fff;border-color:#F06BAA}
+.sexrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0 8px}
+.sexpick{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px 12px;border-radius:16px;background:var(--surface-2);border:2px solid transparent}
+.sexpick svg{width:100%;max-width:110px;height:auto}
+.sexpick b{font:500 16px var(--f-head)}
+.sexpick.m{border-color:#4F8EF7}.sexpick.m b{color:#4F8EF7}
+.sexpick.f{border-color:#F06BAA}.sexpick.f b{color:#F06BAA}
