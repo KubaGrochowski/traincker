@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 44;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 45;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -1284,14 +1284,21 @@
     // mapa mięśni z ostatnich 8 tygodni: główny mięsień 1 seria, pomocniczy ½
     const mus = new Map(); span.forEach(w => w.ex.forEach(e => { const x = exOf(e); if (x.kind === 'cardio') return; const n = work(e.sets).length; (x.primary || []).forEach(m => mus.set(m, (mus.get(m) || 0) + n)); (x.secondary || []).forEach(m => mus.set(m, (mus.get(m) || 0) + n / 2)); }));
     const musL = [...mus.entries()].sort((a, b) => b[1] - a[1]), musMax = musL[0]?.[1] || 1;
-    const heat = Object.fromEntries(musL.map(([m, n]) => [m, .18 + .82 * n / musMax]));
+    const musMin = musL[musL.length - 1]?.[1] || 0;
+    // skala: najmniej trenowany = 0 (ciemny odcień), najwięcej = 1 (jasny odcień)
+    const heat = Object.fromEntries(musL.map(([m, n]) => [m, musMax > musMin ? Math.max(.001, (n - musMin) / (musMax - musMin)) : 1]));
+    const sets = n => { const v = Math.round(n); return `${v} ${plural(v, 'seria', 'serie', 'serii')}`; };
+    const legend = musL.length ? `<div class="hlegend" style="--mc:${SEX_COL[sexOf()]}">
+        <div class="hl-row"><span class="hl-none"><i></i>Brak</span><div class="hl-bar"><i></i></div></div>
+        <div class="hl-lab"><span><small>Najmniej</small><b>${esc(muscleName(musL[musL.length - 1][0]))}</b><em>${sets(musMin)}</em></span><span><small>Najwięcej</small><b>${esc(muscleName(musL[0][0]))}</b><em>${sets(musMax)}</em></span></div>
+      </div>` : '';
     const strip = DAYS.map((dn, i) => { const d = addDays(ws0, i), k = key(d), n = finished().filter(w => key(new Date(w.start)) === k).length; return `<span class="wd${n ? ' on' : ''}${k === t ? ' t' : ''}${k > t ? ' fut' : ''}"><i>${n ? '✓' : ''}</i><small>${dn}</small></span>`; }).join('');
     tabView.innerHTML = `${head('Postępy')}
       <div class="sgrid">
         <section class="scard${animTab ? ' enter' : ''} wkcard" style="--i:0" data-goal role="button" tabindex="0" aria-label="Zmień cel tygodnia"><div class="ring${p >= 1 ? ' full' : ''}" style="--lv:${lv}"><i class="wv"></i><i class="wv b"></i><div class="ring-t"><small>ten tydzień</small><b>${wk}</b><small>z ${g} treningów</small></div></div><div class="wkr"><h3>Cel tygodnia</h3><small>${p >= 1 ? 'osiągnięty — tak trzymaj' : `jeszcze ${g - wk} ${plural(g - wk, 'trening', 'treningi', 'treningów')}`}</small><div class="schips"><span class="schip rec">Seria: ${weekStreak()} tyg.</span></div></div><div class="wstrip">${strip}</div></section>
         <section class="scard${animTab ? ' enter' : ''}" style="--i:1">${calendarHtml()}</section>
         <section class="scard${animTab ? ' enter' : ''}" style="--i:2"><header><div><h3>Mięśnie</h3><small>ostatnie 8 tygodni</small></div></header>
-          ${musL.length ? `<div class="mm heatmap">${bodyMap([], [], heat)}</div>` : '<p class="empty" style="padding:16px">Brak treningów w tym okresie</p>'}</section>
+          ${musL.length ? `<div class="mm heatmap">${bodyMap([], [], heat)}</div>${legend}` : '<p class="empty" style="padding:16px">Brak treningów w tym okresie</p>'}</section>
         <section class="scard${animTab ? ' enter' : ''} links" style="--i:3" id="links-sec">${linksHtml()}</section>
       </div>`;
     loadLinks();

@@ -272,3 +272,23 @@ body:not(.gate) #app-main { position: fixed; inset: 0; overflow: hidden; max-wid
 .irow.out b, .danger { color: var(--accent-hi); }
 .auth-err { color: var(--accent-hi); }
 #overlay .scrim { z-index: 60; }
+
+/* ---------- Postępy: mapa cieplna (ciemny → jasny odcień tego samego koloru) i legenda ---------- */
+.bmap.heat, .hlegend { --mc-lo: color-mix(in srgb, var(--mc) 38%, #0C0B09); --mc-hi: color-mix(in srgb, var(--mc) 62%, #FFFFFF); }
+.bmap.heat .mu.on, .bmap.heat .mu.on[style*="--v:1.00"] { fill: color-mix(in oklab, var(--mc-lo), var(--mc-hi) calc(var(--v, 1) * 100%)); }
+.hlegend { display: grid; gap: 10px; margin-top: 4px; }
+.hl-row { display: flex; align-items: center; gap: 12px; }
+.hl-none { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); flex: none; }
+.hl-none i { width: 14px; height: 14px; border-radius: 5px; background: #3A342C; border: 1px solid var(--line-2); }
+.hl-bar { flex: 1; height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--mc-lo), var(--mc-hi)); border: 1px solid var(--line); overflow: hidden; }
+.hl-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08)); }
+.scard .hl-bar { transform-origin: left; animation: hl-grow .9s var(--ease) .2s both; }
+@keyframes hl-grow { from { transform: scaleX(0); } }
+.hl-lab { display: flex; justify-content: space-between; gap: 12px; }
+.hl-lab span { display: grid; gap: 1px; min-width: 0; }
+.hl-lab span:last-child { text-align: right; }
+.hl-lab small { font: 500 10.5px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.hl-lab b { font: 400 20px/1.1 var(--f-head); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-lab em { font: 500 12px var(--f-mono); font-style: normal; color: var(--ink-2); }
+.hl-lab span:first-child b { color: var(--mc-lo); filter: brightness(1.6); }
+.hl-lab span:last-child b { color: var(--mc-hi); }
