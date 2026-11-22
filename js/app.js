@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 42;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 44;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -272,13 +272,157 @@
   };
 
   /* ---------- mapa mięśni: sylwetka z przodu i z tyłu, mięśnie główne i pomocnicze ---------- */
-  const SEX_COL = { m: '#4F8EF7', f: '#F06BAA' };
+  const SEX_COL = { m: '#7C9CCB', f: '#D493AE' };
   const sexOf = () => state.settings.sex === 'f' ? 'f' : 'm';
   function bodyMap(primary = [], secondary = [], heat, sex) {
     const lvl = {};
     if (heat) Object.assign(lvl, heat); else { secondary.forEach(m => { lvl[m] = .45; }); primary.forEach(m => { lvl[m] = 1; }); }
     const sx = sex === 'f' || sex === 'm' ? sex : sexOf();
     return `<svg class="bmap${heat ? ' heat' : ''}" viewBox="0 0 240 246" style="--mc:${SEX_COL[sx]}" role="img" aria-label="Mapa mięśni — przód i tył">${window.drawBody('front', lvl, sx, 0)}${window.drawBody('back', lvl, sx, 120)}</svg>`;
+  }
+
+  /* ================= wygląd Grochu life: dotyk, menu, listy rozwijane, segmenty ================= */
+  // Krótki tik: Android — Vibration API; iPhone — niewidoczny systemowy przełącznik pod ważnymi przyciskami (prawdziwe dotknięcie gra tik)
+  let hapT = 0;
+  const haptic = (ms = 6) => { const t = performance.now(); if (t - hapT < 24) return; hapT = t; try { navigator.vibrate?.(ms); } catch (_) { } };
+  const HAP = '<label class="hap" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>';
+  const HAP_SEL = '#fab, #menu-btn, .dr-item, .dr-x, .primary, .fin, .restclock, .vdrop, .dd-i, .wsd, .addlink, .startbtn, .confirm button, .sexpick, .lk-yes';
+  // kliknięcie wygenerowane przez sam przełącznik nie może drugi raz uruchomić przycisku
+  document.addEventListener('click', e => { if (e.target.matches?.('.hap input')) e.stopImmediatePropagation(); }, true);
+  // tik przy dotknięciu przycisków i wierszy list
+  document.addEventListener('click', e => { if (e.target.closest?.('button, [role="button"], .irow, label.switch')) haptic(6); }, true);
+  // usuwanie: pierwsze dotknięcie zamienia napis na „Na pewno?”, dopiero drugie usuwa
+  document.addEventListener('click', e => {
+    const b = e.target.closest?.('button.irow.out:not([data-logout]), button.danger, [data-arm]');
+    if (!b || b.disabled || b.classList.contains('armed')) return;
+    e.stopImmediatePropagation(); e.preventDefault(); haptic(10);
+    const lab = b.querySelector('.ir-t b') || [...b.childNodes].find(n => n.nodeType === 3 && n.nodeValue.trim()) || b.querySelector('span');
+    if (!lab) return;
+    const key = lab.nodeType === 3 ? 'nodeValue' : 'textContent', old = lab[key];
+    lab[key] = 'Na pewno?'; b.classList.add('armed');
+    clearTimeout(b._armT); b._armT = setTimeout(() => { if (b.isConnected) { lab[key] = old; b.classList.remove('armed'); } }, 3000);
+  }, true);
+  // po każdej zmianie DOM: przełącznik tiku w ważnych przyciskach, pigułka w segmentach (przesuwa się z poprzedniego miejsca)
+  const segMem = new Map();
+  function decorate(root) {
+    root.querySelectorAll?.(HAP_SEL).forEach(b => { if (!b.querySelector(':scope > .hap')) b.insertAdjacentHTML('beforeend', HAP); });
+    root.querySelectorAll?.('.smode, .vtabs').forEach(sg => {
+      const bs = [...sg.children].filter(x => x.tagName === 'BUTTON'), i = bs.findIndex(x => x.classList.contains('on') || x.getAttribute('aria-selected') === 'true');
+      const k = bs.map(x => Object.keys(x.dataset).join()).join('|') + bs.length;
+      sg.style.setProperty('--n', bs.length);
+      const prev = segMem.get(k); segMem.set(k, i);
+      if (prev != null && prev !== i && i >= 0 && !calm() && sg.dataset.segDone !== String(i)) { sg.style.setProperty('--i', prev); requestAnimationFrame(() => requestAnimationFrame(() => sg.style.setProperty('--i', i))); }
+      else sg.style.setProperty('--i', Math.max(0, i));
+      sg.dataset.segDone = i; sg.classList.toggle('nosel', i < 0);
+    });
+  }
+  new MutationObserver(ms => { for (const m of ms) m.addedNodes.forEach(n => { if (n.nodeType === 1) decorate(n.parentNode || n); }); if (ms.some(m => m.type === 'attributes')) decorate(document); })
+    .observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected'] });
+  // liczby rosną od zera do wartości
+  function countUp(root) {
+    if (calm()) return;
+    root.querySelectorAll('.ring-t b, .cr b, .sumtiles b, .mcard b').forEach(el => {
+      const txt = el.textContent.trim(), m = txt.match(/^([+-]?)(\d[\d\s]*)(.*)$/); if (!m) return;
+      const to = +m[2].replace(/\s/g, ''); if (!to) return;
+      const t0 = performance.now(), dur = Math.min(900, 450 + to * 4);
+      const step = t => { const k = Math.min(1, (t - t0) / dur), v = Math.round(to * (1 - Math.pow(1 - k, 3))); el.textContent = m[1] + v.toLocaleString('pl-PL') + m[3]; if (k < 1) requestAnimationFrame(step); else el.textContent = txt; };
+      requestAnimationFrame(step);
+    });
+  }
+  // przycisk ze strzałką (nazwa bieżącego widoku) i lista rozwijana pod nim
+  const DCHEV = '<svg class="vd-ch" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const dropBtnHtml = (label, attrs = '') => `<button type="button" class="vdrop" aria-haspopup="menu" aria-expanded="false" ${attrs}><span class="vd-l">${esc(label)}</span>${DCHEV}</button>`;
+  function dropdown(anchor, items, value, onPick) {
+    const r = anchor.getBoundingClientRect(), wrap = document.createElement('div');
+    wrap.className = 'dd-ov';
+    wrap.innerHTML = `<div class="dd" role="menu" style="top:${Math.round(r.bottom + 8)}px;${r.left + r.width / 2 < innerWidth / 2 ? `left:${Math.round(r.left)}px;transform-origin:10% 0` : `right:${Math.round(innerWidth - r.right)}px`}">${items.map(([id, l], i) =>
+      `<button type="button" class="dd-i${id === value ? ' on' : ''}" role="menuitemradio" aria-checked="${id === value}" data-id="${esc(id)}" style="--i:${i}"><span>${esc(l)}</span><i class="dd-ck" aria-hidden="true"></i></button>`).join('')}</div>`;
+    document.body.appendChild(wrap);
+    anchor.classList.add('open'); anchor.setAttribute('aria-expanded', 'true');
+    const onKey = e => { if (e.key === 'Escape') shut(); };
+    function shut() {
+      if (wrap.classList.contains('out')) return;
+      wrap.classList.add('out'); anchor.classList.remove('open'); anchor.setAttribute('aria-expanded', 'false');
+      removeEventListener('keydown', onKey); setTimeout(() => wrap.remove(), calm() ? 0 : 240);
+    }
+    wrap.addEventListener('click', e => {
+      e.stopPropagation();
+      const b = e.target.closest('.dd-i');
+      if (b) { shut(); if (b.dataset.id !== value) onPick(b.dataset.id); return; }
+      if (e.target === wrap) shut();
+    });
+    addEventListener('keydown', onKey);
+  }
+
+  /* ----- menu wysuwane z prawej (hamburger w prawym górnym rogu, gest od prawej krawędzi) ----- */
+  const MENU = [
+    ['log', 'Treningi', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4.5" width="16" height="16" rx="3.5" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 3v3M15.5 3v3M8.5 13l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
+    ['routines', 'Plany', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor"/></svg>'],
+    ['progress', 'Postępy', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19.5h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M6.5 16v-4M11 16V8M15.5 16v-6M20 16V5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>'],
+    ['settings', 'Ustawienia', GEAR],
+  ];
+  const menuBtn = $('menu-btn'), drawer = $('drawer'), mscrim = $('mscrim');
+  let menuOpen = false;
+  if (menuBtn && drawer) {
+    menuBtn.innerHTML = '<span class="mb-lines" aria-hidden="true"><i></i><i></i><i></i></span>';
+    drawer.innerHTML = `<div class="dr-head"><span class="dr-brand">Traincker<i>.</i></span><button class="dr-x" type="button" aria-label="Zamknij menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button></div>
+      <nav class="dr-list" aria-label="Widoki">${MENU.map(([id, l, ic], i) => `<button type="button" class="dr-item" data-go="${id}" style="--i:${i}"><span class="dr-ic">${ic}</span><span class="dr-l">${l}</span><i class="dr-dot" aria-hidden="true"></i></button>`).join('')}</nav>
+      <div class="dr-foot"><span class="dr-mail"></span></div>`;
+    menuBtn.addEventListener('click', () => menuOpen ? closeMenu() : openMenu());
+    drawer.addEventListener('click', e => {
+      if (e.target.closest('.dr-x')) { closeMenu(); return; }
+      const b = e.target.closest('[data-go]'); if (!b) return;
+      const id = b.dataset.go; closeMenu();
+      if (id === 'settings') { setTimeout(() => pushDetail({ type: 'settings' }), calm() ? 0 : 180); return; }
+      if (id === tab && !stack.length) tabView.scrollTo({ top: 0, behavior: 'smooth' }); else setTab(id);
+    });
+    mscrim.addEventListener('click', closeMenu);
+    addEventListener('keydown', e => { if (e.key === 'Escape' && menuOpen) closeMenu(); });
+    bindEdgeSwipe();
+  }
+  function markMenu() {
+    if (!drawer) return;
+    const cur = stack.some(z => z.type === 'settings') ? 'settings' : tab;
+    drawer.querySelectorAll('.dr-item').forEach(b => { const on = b.dataset.go === cur; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
+  }
+  function openMenu() {
+    if (menuOpen || !drawer) return;
+    menuOpen = true; markMenu();
+    drawer.querySelector('.dr-mail').textContent = window.Cloud?.user?.email || '';
+    drawer.style.transform = ''; mscrim.style.opacity = '';
+    document.body.classList.add('menu-open'); drawer.setAttribute('aria-hidden', 'false'); menuBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeMenu() {
+    if (!menuOpen) return;
+    menuOpen = false; drawer.style.transform = ''; mscrim.style.opacity = '';
+    document.body.classList.remove('menu-open'); drawer.setAttribute('aria-hidden', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
+  }
+  // przesunięcie palcem w lewo od prawej krawędzi otwiera menu (jedzie za palcem), w otwartym menu w prawo zamyka
+  function bindEdgeSwipe() {
+    const EDGE = 24, edgeOk = () => !menuOpen && !document.body.classList.contains('gate') && !document.body.classList.contains('layer-full') && !overlay.innerHTML;
+    let sx = 0, sy = 0, mode = null, axis = null, dx = 0;
+    addEventListener('pointerdown', e => { if (e.pointerType === 'touch' && edgeOk() && e.clientX > innerWidth - EDGE) e.stopPropagation(); }, true);
+    addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0]; sx = t.clientX; sy = t.clientY; axis = null; dx = 0;
+      mode = edgeOk() && sx > innerWidth - EDGE ? 'open' : menuOpen && (drawer.contains(e.target) || e.target === mscrim) ? 'close' : null;
+    }, { passive: true });
+    addEventListener('touchmove', e => {
+      if (!mode) return;
+      const t = e.touches[0]; dx = t.clientX - sx;
+      if (!axis) { if (Math.hypot(dx, t.clientY - sy) < 8) return; axis = Math.abs(dx) > Math.abs(t.clientY - sy) ? 'x' : 'y'; if (axis === 'y') { mode = null; return; } document.body.classList.add('menu-drag'); }
+      const w = drawer.offsetWidth || 300, shown = mode === 'open' ? Math.max(0, Math.min(w, -dx)) : Math.max(0, Math.min(w, w - dx));
+      drawer.style.transform = `translateX(${w - shown}px)`; mscrim.style.opacity = String(shown / w);
+      document.body.style.setProperty('--menu-p', (shown / w).toFixed(3));
+    }, { passive: true });
+    addEventListener('touchend', () => {
+      if (!mode) return;
+      const m = mode; mode = null;
+      document.body.classList.remove('menu-drag'); document.body.style.removeProperty('--menu-p');
+      if (axis !== 'x') return;
+      if (m === 'open') { if (dx < -70) { haptic(6); openMenu(); } else { drawer.style.transform = ''; mscrim.style.opacity = ''; } }
+      else if (dx > 60) closeMenu(); else { drawer.style.transform = ''; mscrim.style.opacity = ''; }
+    });
   }
 
   /* ================= rysowanie ================= */
@@ -289,6 +433,8 @@
     if (wOpen && state.active) { wkLayer.hidden = false; renderWorkout(); } else { wkLayer.hidden = true; wkLayer.innerHTML = ''; wOpen = false; }
     if (stack.length) { dtLayer.hidden = false; renderDetail(); } else { dtLayer.hidden = true; dtLayer.innerHTML = ''; }
     document.body.classList.toggle('locked', wOpen || !!stack.length);
+    document.body.classList.toggle('layer-full', wOpen || !!stack.length);
+    markMenu();
     animTab = false;
   }
   function renderTab() {
@@ -297,11 +443,13 @@
     ({ log: renderLog, routines: renderRoutines, progress: renderProgress })[tab]();
     tabView.scrollTop = animTab ? 0 : y;
   }
-  const head = (title, _sub, right = '') => `<header class="scr-h"><div class="scr-t"><h1>${title}</h1><div class="scr-r">${right}<button class="hbtn gear" data-settings aria-label="Ustawienia">${GEAR}</button></div></div></header>`;
-  const emptyCard = (title, text, btn = '') => `<div class="break-card empty-day"><div class="bk-sea" aria-hidden="true">${SEA_SVG}<i class="bk-boat">${BOAT}</i></div><div class="bk-txt"><b>${title}</b><small>${text}</small></div>${btn}</div>`;
+  const head = (title, _sub, right = '') => `<header class="scr-h"><div class="scr-t"><h1>${title}<i class="tdot">.</i></h1><div class="scr-r">${right}</div></div></header>`;
+  const emptyCard = (title, text) => { const t = (text || '').split(/(?<=[.!?])\s/)[0] || title; return `<div class="empty-st"><div class="es-ic" aria-hidden="true">${ES_IC}</div><p>${esc(t)}</p></div>`; };
+  const ES_IC = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 10v4M6.5 7v10M17.5 7v10M21 10v4M6.5 12h11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
   function renderLive() {
     const a = state.active, lb = $('livebar');
-    $('fab').hidden = !!a || tab !== 'log';
+    $('fab').hidden = tab === 'progress' || (tab === 'log' && !!a);
+    $('fab').setAttribute('aria-label', tab === 'routines' ? 'Nowy plan' : 'Nowy trening');
     lb.hidden = !a || wOpen;
     if (a && !wOpen) lb.innerHTML = `<span class="lv-dot"></span><span class="lv-t"><b>${esc(a.name)}</b><small>${a.edit ? 'edycja treningu' : `trwa · <span data-el>${elapsed()}</span>`}${rest ? ` · przerwa <span data-rl>${fmtSec(restLeft())}</span>` : ''}</small></span><span class="lv-go">Wróć</span>`;
   }
@@ -559,10 +707,7 @@
       save(); close(); render();
     });
     $('m-cancel')?.addEventListener('click', () => { const id = a.edit; state.active = null; wOpen = false; save(); close(); pushDetail({ type: 'w', id }); });
-    $('m-drop')?.addEventListener('click', () => {
-      overlay.innerHTML = sheet('Odrzucić trening?', 'Serie z tego treningu nie zostaną zapisane', `<div class="confirm"><button data-close>Nie</button><button class="yes" id="c-yes">Odrzuć</button></div>`);
-      $('c-yes').addEventListener('click', () => { state.active = null; wOpen = false; stopRest(); save(); close(); render(); toast('Trening odrzucony'); });
-    });
+    $('m-drop')?.addEventListener('click', () => { state.active = null; wOpen = false; stopRest(); save(); close(); render(); toast('Trening odrzucony'); });
   }
   function finishAsk() {
     const a = state.active; if (!a) return;
@@ -678,8 +823,7 @@
       if (act === 'upd') { const r = state.routines[w.rid]; r.ex = w.ex.map(e => ({ eid: e.eid, w: e.sets.filter(x => x.t === 'w').length, n: work(e.sets).length || 1, note: r.ex.find(x => x.eid === e.eid)?.note || '', sup: e.sup || null })); save(); close(); toast('Plan zaktualizowany'); return; }
       if (act === 'plan') { const r = { id: uid('r'), name: w.name, created: Date.now(), note: '', target: 'latest', ex: w.ex.map(e => ({ eid: e.eid, w: e.sets.filter(x => x.t === 'w').length, n: work(e.sets).length || 1, note: '', sup: e.sup || null })) }; state.routines[r.id] = r; save(); close(); toast(`Zapisano plan „${r.name}”`); tab = 'routines'; stack = [{ type: 'r', id: r.id }]; render(); }
       if (act === 'del') {
-        overlay.innerHTML = sheet('Usunąć trening?', esc(w.name), `<div class="confirm"><button data-close>Anuluj</button><button class="yes" id="cd-yes">Usuń</button></div>`);
-        $('cd-yes').addEventListener('click', () => { delete state.workouts[id]; finished().filter(x => x.start > w.start).reverse().forEach(x => { x.prs = computePRs(x); }); save(); close(); stack = stack.filter(z => !(z.type === 'w' && z.id === id)); render(); toast('Usunięto'); });
+        { delete state.workouts[id]; finished().filter(x => x.start > w.start).reverse().forEach(x => { x.prs = computePRs(x); }); save(); close(); stack = stack.filter(z => !(z.type === 'w' && z.id === id)); render(); toast('Usunięto'); }
       }
     }));
   }
@@ -689,7 +833,7 @@
   function renderRoutines() {
     const rs = routinesSorted();
     const rows = rs.map((r, i) => { const last = finished().find(w => w.rid === r.id), sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow" data-r="${r.id}" style="--i:${i}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii${last ? ' · ostatnio ' + ago(last.start) : ''}</small></span><span class="rhandle" aria-label="Przesuń plan" title="Przytrzymaj i przesuń">${GRIP}</span></button>`; }).join('');
-    tabView.innerHTML = `${head('Plany', '', `<button class="hbtn" data-rnew aria-label="Nowy plan">${PLUS}</button>`)}
+    tabView.innerHTML = `${head('Plany')}
       ${rs.length ? `<div class="ilist${animTab ? ' enter' : ''}">${rows}</div>` : emptyCard('Brak planów', 'Dodaj pierwszy plan przyciskiem +.', '<button class="primary acc" data-rnew>Nowy plan</button>')}`;
   }
   // przytrzymanie wiersza planu (ok. pół sekundy) pyta o usunięcie
@@ -790,10 +934,7 @@
     const r = state.routines[id];
     overlay.innerHTML = sheet(esc(r.name), '', `<div class="ilist"><button class="irow" data-rm="dup"><span class="ir-t"><b>Duplikuj plan</b></span></button></div><div class="ilist"><button class="irow out" data-rm="del"><span class="ir-t"><b>Usuń plan</b><small>treningi z tego planu zostaną w historii</small></span></button></div>`, 'Opcje planu');
     overlay.querySelector('[data-rm="dup"]').addEventListener('click', () => { const c = { ...deep(r), id: uid('r'), name: r.name + ' (kopia)', created: Date.now() }; delete c.order; state.routines[c.id] = c; save(); close(); stack[stack.length - 1] = { type: 'r', id: c.id }; render(); toast('Skopiowano plan'); });
-    overlay.querySelector('[data-rm="del"]').addEventListener('click', () => {
-      overlay.innerHTML = sheet('Usunąć plan?', esc(r.name), `<div class="confirm"><button data-close>Anuluj</button><button class="yes" id="rd-yes">Usuń</button></div>`);
-      $('rd-yes').addEventListener('click', () => { delete state.routines[id]; save(); close(); stack = stack.filter(z => !(z.type === 'r' && z.id === id)); render(); toast('Plan usunięty'); });
-    });
+    overlay.querySelector('[data-rm="del"]').addEventListener('click', () => { delete state.routines[id]; save(); close(); stack = stack.filter(z => !(z.type === 'r' && z.id === id)); render(); toast('Plan usunięty'); });
   }
   /* ----- Ćwiczenia ----- */
   function exUse() {
@@ -896,9 +1037,7 @@
       if (done) done(nx); else { close(); render(); }
     });
     $('c-del')?.addEventListener('click', () => {
-      const used = exUse().get(x.id)?.n || 0;
-      overlay.innerHTML = sheet('Usunąć ćwiczenie?', esc(x.name), `${used ? `<p class="hint">Jest w ${used} treningach — tam zostanie pod tą samą nazwą.</p>` : ''}<div class="confirm"><button data-close>Anuluj</button><button class="yes" id="cx-yes">Usuń</button></div>`);
-      $('cx-yes').addEventListener('click', () => { finished().forEach(w => w.ex.forEach(e => { if (e.eid === x.id) e.n = x.name; })); delete state.exercises[x.id]; save(); close(); stack = stack.filter(z => !(z.type === 'ex' && z.eid === x.id)); render(); toast('Usunięto'); });
+      { finished().forEach(w => w.ex.forEach(e => { if (e.eid === x.id) e.n = x.name; })); delete state.exercises[x.id]; save(); close(); stack = stack.filter(z => !(z.type === 'ex' && z.eid === x.id)); render(); toast('Usunięto'); }
     });
   }
 
@@ -929,7 +1068,8 @@
   function exerciseScreen(d) {
     const x = exAny(d.eid), k = x.kind, ss = sessionsOf(d.eid);
     d.tab = d.tab || 'hist';
-    const tabs = `<div class="smode s4 xtabs"><button data-xt2="hist" class="${d.tab === 'hist' ? 'on' : ''}">Historia</button><button data-xt2="chart" class="${d.tab === 'chart' ? 'on' : ''}">Wykres</button><button data-xt2="rec" class="${d.tab === 'rec' ? 'on' : ''}">Rekordy</button><button data-xt2="info" class="${d.tab === 'info' ? 'on' : ''}">Opis</button></div>`;
+    const XT = [['hist', 'Historia'], ['chart', 'Wykres'], ['rec', 'Rekordy'], ['info', 'Opis']];
+    const tabs = `<div class="xdrop-row">${dropBtnHtml((XT.find(x => x[0] === d.tab) || XT[0])[1], 'data-xdrop')}</div>`;
     let body;
     if (d.tab === 'info') body = infoHtml(x);
     else if (!ss.length) body = emptyCard('Brak danych', 'Zrób to ćwiczenie na treningu — tu pojawi się historia, wykres i rekordy.');
@@ -1102,7 +1242,7 @@
         <div class="cr">${prog(me, meP)}<span>Progres objętości</span>${prog(th, thP)}</div>
       </div>
       <div class="cmp-miss"><div><small>Ty — nie trenowane</small><p>${miss(me)}</p></div><div><small>${nameOf(l)} — nie trenowane</small><p>${miss(th)}</p></div></div>
-      <button class="link-x" data-unlink="${l.id}">Usuń połączenie</button>
+      <button class="link-x danger" data-unlink="${l.id}">Usuń połączenie</button>
     </div>`;
   }
   function linksHtml() {
@@ -1113,7 +1253,7 @@
     const inc = links.list.filter(l => l.status === 'pending' && l.incoming), out = links.list.filter(l => l.status === 'pending' && !l.incoming), acc = links.list.filter(l => l.status === 'accepted');
     let h = hd;
     h += inc.map(l => `<div class="lk-req"><span><b>${esc(l.email || 'Ktoś')}</b> chce się połączyć</span><button class="lk-yes" data-lacc="${l.id}">Akceptuj</button><button class="lk-no" data-lrej="${l.id}">Odrzuć</button></div>`).join('');
-    h += out.map(l => `<div class="lk-req out"><span>Zaproszenie${l.code ? ` do <b>${esc(l.code)}</b>` : ''} czeka na akceptację</span><button class="lk-no" data-unlink="${l.id}">Wycofaj</button></div>`).join('');
+    h += out.map(l => `<div class="lk-req out"><span>Zaproszenie${l.code ? ` do <b>${esc(l.code)}</b>` : ''} czeka na akceptację</span><button class="lk-no" data-arm data-unlink="${l.id}">Wycofaj</button></div>`).join('');
     h += acc.map(cmpHtml).join('');
     if (!links.list.length) h += '<p class="empty lk-e">Połącz się kodem z drugą osobą i porównujcie, które partie przetrenowaliście w tygodniu</p>';
     return h;
@@ -1155,6 +1295,7 @@
         <section class="scard${animTab ? ' enter' : ''} links" style="--i:3" id="links-sec">${linksHtml()}</section>
       </div>`;
     loadLinks();
+    if (animTab) countUp(tabView);
     const ringEl = tabView.querySelector('.ring');
     if (ringEl && !calm() && prevRing !== lv) { const top = l => `calc(4% + ${(100 - l) * .96}%)`, from = prevRing ?? 0; ringEl.querySelectorAll('.wv').forEach(w => w.animate({ top: [top(from), top(lv)] }, { duration: 1300, easing: 'cubic-bezier(.3,.7,.3,1)' })); }
     prevRing = lv;
@@ -1392,12 +1533,25 @@
   }
 
   /* ---------- zdarzenia ---------- */
-  function setTab(t) { tab = t; animTab = true; stack = []; try { localStorage.setItem('ggym.tab', t); } catch (_) { } tabView.innerHTML = ''; render(); tabView.scrollTop = 0; }
+  const TABS = ['log', 'routines', 'progress'];
+  function setTab(t) {
+    const dir = TABS.indexOf(t) >= TABS.indexOf(tab) ? 1 : -1, same = t === tab;
+    if (!calm() && !same) {
+      const r = tabView.getBoundingClientRect(), g = tabView.cloneNode(true);
+      g.removeAttribute('id'); g.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+      g.className = 'tv-ghost'; Object.assign(g.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' });
+      const y = tabView.scrollTop; tabView.after(g); g.scrollTop = y;
+      g.animate([{ opacity: 1, transform: 'none', filter: 'blur(0)' }, { opacity: 0, transform: `translate3d(${-dir * 7}%,0,0) scale(.95)`, filter: 'blur(6px)' }], { duration: 360, easing: 'cubic-bezier(.6,0,.8,.4)', fill: 'forwards' }).onfinish = () => g.remove();
+    }
+    tab = t; animTab = true; stack = []; try { localStorage.setItem('ggym.tab', t); } catch (_) { } tabView.innerHTML = ''; render(); tabView.scrollTop = 0;
+    if (!calm() && !same) tabView.animate([{ opacity: 0, transform: `translate3d(${dir * 9}%,0,0) scale(.98)`, filter: 'blur(8px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }], { duration: 620, delay: 140, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+  }
   document.addEventListener('click', e => {
     if (e.target.closest('#overlay')) return;
     const T = s => e.target.closest(s); let b;
     // zakładki i główne przyciski
     if ((b = T('#tabbar [data-tab]'))) { if (b.dataset.tab === tab && !stack.length) tabView.scrollTo({ top: 0, behavior: 'smooth' }); else setTab(b.dataset.tab); return; }
+    if (T('#fab') && tab === 'routines') { newRoutine(); return; }
     if (T('#fab') || T('[data-start]')) { if (!calm()) ripple(e.clientX, e.clientY, 1.2); openStart(); return; }
     if (T('#livebar')) { openWorkout(); return; }
     if (T('[data-back]')) { popDetail(); return; }
@@ -1433,6 +1587,7 @@
       overlay.querySelectorAll('[data-tv]').forEach(z => z.addEventListener('click', () => { r.target = z.dataset.tv; save(); close(); render(); }));
       return;
     }
+    if ((b = T('[data-xdrop]'))) { const d = stack[stack.length - 1]; dropdown(b, [['hist', 'Historia'], ['chart', 'Wykres'], ['rec', 'Rekordy'], ['info', 'Opis']], d.tab, id => { d.tab = id; d.sel = null; render(); }); return; }
     if ((b = T('[data-xt2]'))) { const d = stack[stack.length - 1]; d.tab = b.dataset.xt2; d.sel = null; render(); return; }
     if ((b = T('[data-xm]'))) { const d = stack[stack.length - 1]; d.m = b.dataset.xm; d.sel = null; render(); return; }
     if ((b = T('[data-xr]'))) { const d = stack[stack.length - 1]; d.range = b.dataset.xr; d.sel = null; render(); return; }
@@ -1449,12 +1604,7 @@
     if (T('[data-addlink]')) { if (!window.Cloud?.user) { toast('Zaloguj się, żeby łączyć konta'); return; } openLinks(); return; }
     if ((b = T('[data-lacc]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lacc, p_accept: true }, 'Połączono'); return; }
     if ((b = T('[data-lrej]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lrej, p_accept: false }); return; }
-    if ((b = T('[data-unlink]'))) {
-      const id = +b.dataset.unlink;
-      overlay.innerHTML = sheet('Usunąć połączenie?', 'Przestaniecie widzieć nawzajem swoje treningi', '<button class="primary" id="ul-yes">Usuń</button>', 'Usuń połączenie');
-      $('ul-yes').addEventListener('click', () => { close(); linkAct('gym_remove_link', { p_id: id }); });
-      return;
-    }
+    if ((b = T('[data-unlink]'))) { linkAct('gym_remove_link', { p_id: +b.dataset.unlink }); return; }
     if ((b = T('[data-cmpw]'))) { cmpWeek = Math.min(0, cmpWeek + +b.dataset.cmpw); const sec = $('links-sec'); if (sec) sec.innerHTML = linksHtml(); return; }
     if ((b = T('[data-sex]'))) { state.settings.sex = b.dataset.sex; save(); render(); return; }
     if ((b = T('[data-unit]'))) { state.settings.unit = b.dataset.unit; save(); render(); return; }
@@ -1504,7 +1654,7 @@
     let el = document.querySelector('.toast');
     if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
     el.textContent = m; el.hidden = false; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
-    clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2800);
+    clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2600);
   }
 
   /* ---------- morskie efekty: kręgi na wodzie ---------- */

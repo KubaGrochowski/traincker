@@ -1,15 +1,16 @@
 /* Traincker — service worker: aplikacja działa offline (także w piwnicy na siłowni). Dane treningów nie są tu przechowywane (zostają w localStorage). */
-const VERSION = 'v42';
+const VERSION = 'v44';
 const CACHE = `ggym-${VERSION}`;
 const SHELL = [
   './',
   'index.html',
-  'css/styles.css?v=42',
-  'js/cloud.js?v=42',
-  'js/exercises.js?v=42',
-  'js/exercises-pl.js?v=42',
-  'js/body2d.js?v=42',
-  'js/app.js?v=42',
+  'css/styles.css?v=44',
+  'css/look.css?v=44',
+  'js/cloud.js?v=44',
+  'js/exercises.js?v=44',
+  'js/exercises-pl.js?v=44',
+  'js/body2d.js?v=44',
+  'js/app.js?v=44',
   'manifest.webmanifest',
   'icons/favicon.png',
   'icons/icon-192.png',

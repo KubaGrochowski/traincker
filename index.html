@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#1C1C1E">
+<meta name="theme-color" content="#0C0B09">
 <title>Traincker</title>
 <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -15,8 +15,9 @@
 <meta name="apple-mobile-web-app-title" content="Traincker">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/styles.css?v=42">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="css/styles.css?v=44">
+<link rel="stylesheet" href="css/look.css?v=44">
 <script>
 /* Komputer: aplikacja w ramce iPhone'a 13 (390 × 844 pkt) — w środku ta sama strona co na telefonie */
 if (window.top === window.self && innerWidth >= 700 && matchMedia('(hover: hover) and (pointer: fine)').matches) document.documentElement.classList.add('pcframe');
@@ -29,6 +30,7 @@ html.pcframe body > *:not(#pcframe){display:none!important}
 </style>
 </head>
 <body>
+<div class="bg" aria-hidden="true"><i class="bg-a"></i><i class="bg-b"></i><i class="bg-c"></i></div>
 <section class="auth" id="auth" hidden>
   <div class="auth-card">
     <div class="auth-brand"><img src="icons/icon-192.png" alt="" width="56" height="56"><h1>Traincker</h1></div>
@@ -50,16 +52,14 @@ html.pcframe body > *:not(#pcframe){display:none!important}
   <div id="tab-view"></div>
   <button class="livebar" id="livebar" hidden></button>
   <button class="fab" id="fab" aria-label="Nowy trening"><svg width="22" height="22" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-  <nav class="tabbar" id="tabbar" aria-label="Zakładki">
-    <button data-tab="log" aria-label="Treningi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4.5" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 2.8v3.4M16 2.8v3.4M4 9.5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 14.5l2.3 2.2 4.7-4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Treningi</span></button>
-    <button data-tab="routines" aria-label="Plany"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor"/></svg><span>Plany</span></button>
-    <button data-tab="progress" aria-label="Postępy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19.5h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5.5" y="12" width="3" height="5.5" rx="1" fill="currentColor"/><rect x="10.5" y="8" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15.5" y="4.5" width="3" height="13" rx="1" fill="currentColor"/></svg><span>Postępy</span></button>
-  </nav>
 </main>
 
 <section class="layer" id="wk-layer" hidden></section>
 <section class="layer dt" id="dt-layer" hidden></section>
 <div id="overlay"></div>
+<button class="menu-btn" id="menu-btn" type="button" aria-label="Menu" aria-expanded="false"></button>
+<div class="mscrim" id="mscrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
 <script>
 if (document.documentElement.classList.contains('pcframe')) {
   const box = document.createElement('div'); box.id = 'pcframe';
@@ -70,10 +70,10 @@ if (document.documentElement.classList.contains('pcframe')) {
   fit(); addEventListener('resize', fit);
 }
 </script>
-<script src="js/cloud.js?v=42"></script>
-<script src="js/exercises.js?v=42"></script>
-<script src="js/exercises-pl.js?v=42"></script>
-<script src="js/body2d.js?v=42"></script>
-<script src="js/app.js?v=42"></script>
+<script src="js/cloud.js?v=44"></script>
+<script src="js/exercises.js?v=44"></script>
+<script src="js/exercises-pl.js?v=44"></script>
+<script src="js/body2d.js?v=44"></script>
+<script src="js/app.js?v=44"></script>
 </body>
 </html>
