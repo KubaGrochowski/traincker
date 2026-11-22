@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 41;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 42;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -274,10 +274,10 @@
   /* ---------- mapa mięśni: sylwetka z przodu i z tyłu, mięśnie główne i pomocnicze ---------- */
   const SEX_COL = { m: '#4F8EF7', f: '#F06BAA' };
   const sexOf = () => state.settings.sex === 'f' ? 'f' : 'm';
-  function bodyMap(primary = [], secondary = [], heat) {
+  function bodyMap(primary = [], secondary = [], heat, sex) {
     const lvl = {};
     if (heat) Object.assign(lvl, heat); else { secondary.forEach(m => { lvl[m] = .45; }); primary.forEach(m => { lvl[m] = 1; }); }
-    const sx = sexOf();
+    const sx = sex === 'f' || sex === 'm' ? sex : sexOf();
     return `<svg class="bmap${heat ? ' heat' : ''}" viewBox="0 0 240 246" style="--mc:${SEX_COL[sx]}" role="img" aria-label="Mapa mięśni — przód i tył">${window.drawBody('front', lvl, sx, 0)}${window.drawBody('back', lvl, sx, 120)}</svg>`;
   }
 
@@ -1049,6 +1049,95 @@
   const spanStart = () => addDays(weekStart(new Date()), -(pWeeks - 1) * 7).getTime();
   const spanWorkouts = () => { const a = spanStart(); return finished().filter(w => w.start >= a); };
   let prevRing = null;
+  /* ----- Połączenia kont: kod konta, zaproszenia, porównanie tygodnia ----- */
+  const links = { list: null, at: 0, data: {}, loading: false, err: '' };
+  let myCode, cmpWeek = 0;
+  const KEY_MUS = ['chest', 'shoulders', 'biceps', 'triceps', 'lats', 'middle back', 'lower back', 'abdominals', 'glutes', 'quadriceps', 'hamstrings', 'calves'];
+  const nameOf = l => l.email ? esc(l.email.split('@')[0]) : 'Druga osoba';
+  const linkErr = e => /code_not_found/.test(e?.message) ? 'Nie ma konta z takim kodem' : /own_code/.test(e?.message) ? 'To Twój własny kod' : (e?.status === 404 || /PGRST202|Could not find the function|gym_/.test(`${e?.code} ${e?.message}`)) ? 'setup' : navigator.onLine === false ? 'Brak internetu' : (e?.message || 'Coś poszło nie tak');
+  async function loadLinks(force) {
+    if (!window.Cloud?.user || links.loading || (!force && Date.now() - links.at < 30000)) return;
+    links.loading = true;
+    try {
+      links.list = await window.Cloud.rpc('gym_links_list') || [];
+      await Promise.all(links.list.filter(l => l.status === 'accepted').map(async l => { try { links.data[l.other] = await window.Cloud.partner(l.other); } catch (_) { } }));
+      links.at = Date.now(); links.err = '';
+    } catch (e) { links.err = linkErr(e); }
+    finally { links.loading = false; }
+    const sec = $('links-sec'); if (sec && tab === 'progress') sec.innerHTML = linksHtml();
+  }
+  // statystyki tygodnia dla dowolnej osoby (moje dane albo dane połączonej osoby)
+  function weekOf(st, off) {
+    const a = addDays(weekStart(new Date()), off * 7).getTime(), b = addDays(new Date(a), 7).getTime();
+    const ws = Object.values(st?.workouts || {}).filter(w => w && w.start >= a && w.start < b && w.end);
+    const cx = st?.exercises || {}, ex = e => cx[e.eid] || exOf(e);
+    let sets = 0, vol = 0, ms = 0, prs = 0; const pr = new Set(), se = new Set();
+    ws.forEach(w => {
+      ms += (w.end || w.start) - w.start; prs += w.prs?.length || 0;
+      (w.ex || []).forEach(e => { const x = ex(e), k = x.kind || 'wr', ss = work(e.sets || []); sets += ss.length; vol += volOf(ss, k); if (k === 'cardio' || !ss.length) return; (x.primary || []).forEach(m => pr.add(m)); (x.secondary || []).forEach(m => se.add(m)); });
+    });
+    const lvl = {}; se.forEach(m => { lvl[m] = .45; }); pr.forEach(m => { lvl[m] = 1; });
+    return { n: ws.length, sets, vol, ms, prs, lvl, pr, sex: st?.settings?.sex === 'f' ? 'f' : 'm' };
+  }
+  const pct = (a, b) => !b ? (a ? '+100%' : '—') : `${a >= b ? '+' : ''}${Math.round((a - b) / b * 100)}%`;
+  function cmpHtml(l) {
+    const P = links.data[l.other];
+    if (!P) return `<div class="cmp"><p class="empty">${links.loading ? 'Ładowanie…' : 'Brak danych drugiej osoby'}</p></div>`;
+    const me = weekOf(state, cmpWeek), th = weekOf(P, cmpWeek), meP = weekOf(state, cmpWeek - 1), thP = weekOf(P, cmpWeek - 1);
+    const a = addDays(weekStart(new Date()), cmpWeek * 7), e = addDays(a, 6);
+    const lbl = cmpWeek === 0 ? 'Ten tydzień' : cmpWeek === -1 ? 'Poprzedni tydzień' : `${a.getDate()} ${MON_S[a.getMonth()]} – ${e.getDate()} ${MON_S[e.getMonth()]}`;
+    const row = (label, x, y, fmt, hi = true) => `<div class="cr"><b class="${hi && x > y ? 'win' : ''}">${fmt(x)}</b><span>${label}</span><b class="${hi && y > x ? 'win' : ''}">${fmt(y)}</b></div>`;
+    const miss = w => { const m = KEY_MUS.filter(x => !w.pr.has(x)); return m.length ? m.map(x => `<span class="mtag">${muscleName(x)}</span>`).join('') : '<span class="mtag ok">Wszystko ✓</span>'; };
+    const prog = (w, p) => `<b class="${w.vol >= p.vol && w.vol ? 'win' : ''}">${pct(w.vol, p.vol)}</b>`;
+    return `<div class="cmp">
+      <div class="cmp-nav"><button class="navarr" data-cmpw="-1" aria-label="Poprzedni tydzień">‹</button><b>${lbl}</b><button class="navarr" data-cmpw="1" aria-label="Następny tydzień" ${cmpWeek >= 0 ? 'disabled' : ''}>›</button></div>
+      <div class="cmp-who"><b class="${me.sex}">Ty</b><b class="${th.sex}">${nameOf(l)}</b></div>
+      <div class="cmp-figs"><div>${bodyMap([], [], me.lvl, me.sex)}</div><div>${bodyMap([], [], th.lvl, th.sex)}</div></div>
+      <div class="cmp-t">
+        ${row('Treningi', me.n, th.n, v => v)}
+        ${row('Serie', me.sets, th.sets, v => v)}
+        ${row(`Objętość (${U()})`, me.vol, th.vol, v => fmtVol(v))}
+        ${row('Czas', me.ms, th.ms, v => v ? fmtDur(v) : '0')}
+        ${row('Rekordy', me.prs, th.prs, v => v)}
+        <div class="cr">${prog(me, meP)}<span>Progres objętości</span>${prog(th, thP)}</div>
+      </div>
+      <div class="cmp-miss"><div><small>Ty — nie trenowane</small><p>${miss(me)}</p></div><div><small>${nameOf(l)} — nie trenowane</small><p>${miss(th)}</p></div></div>
+      <button class="link-x" data-unlink="${l.id}">Usuń połączenie</button>
+    </div>`;
+  }
+  function linksHtml() {
+    const hd = `<header><div><h3>Połączenia</h3><small>porównanie treningów</small></div><button class="addlink" data-addlink>${PLUS}Dodaj połączenie</button></header>`;
+    if (!window.Cloud?.user) return hd + '<p class="empty lk-e">Zaloguj się, żeby łączyć konta</p>';
+    if (links.err === 'setup') return hd + '<p class="empty lk-e">Połączenia nie są jeszcze włączone w bazie danych</p>';
+    if (links.list === null) return hd + `<p class="empty lk-e">${links.err ? esc(links.err) : 'Ładowanie…'}</p>`;
+    const inc = links.list.filter(l => l.status === 'pending' && l.incoming), out = links.list.filter(l => l.status === 'pending' && !l.incoming), acc = links.list.filter(l => l.status === 'accepted');
+    let h = hd;
+    h += inc.map(l => `<div class="lk-req"><span><b>${esc(l.email || 'Ktoś')}</b> chce się połączyć</span><button class="lk-yes" data-lacc="${l.id}">Akceptuj</button><button class="lk-no" data-lrej="${l.id}">Odrzuć</button></div>`).join('');
+    h += out.map(l => `<div class="lk-req out"><span>Zaproszenie${l.code ? ` do <b>${esc(l.code)}</b>` : ''} czeka na akceptację</span><button class="lk-no" data-unlink="${l.id}">Wycofaj</button></div>`).join('');
+    h += acc.map(cmpHtml).join('');
+    if (!links.list.length) h += '<p class="empty lk-e">Połącz się kodem z drugą osobą i porównujcie, które partie przetrenowaliście w tygodniu</p>';
+    return h;
+  }
+  function openLinks() {
+    const codeHtml = () => myCode ? `<b class="lk-code">${esc(myCode)}</b><button class="lk-copy" data-copycode>Kopiuj</button>` : myCode === null ? '<button class="primary acc" data-gencode>Wygeneruj kod</button>' : '<span class="hint">Ładowanie…</span>';
+    overlay.innerHTML = sheet('Dodaj połączenie', 'Połączcie konta i porównujcie treningi', `
+      <div class="lk-sec"><small>Twój kod</small><div class="lk-row" id="lk-code">${codeHtml()}</div><p class="hint">Podaj go drugiej osobie. Kod jest przypisany do Twojego konta na stałe.</p></div>
+      <div class="lk-sec"><small>Kod drugiej osoby</small><div class="lk-row"><input id="lk-in" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="np. K7M2QX"><button class="primary acc" data-sendlink>Połącz</button></div><p class="hint" id="lk-msg">Druga osoba musi zaakceptować zaproszenie.</p></div>`, 'Dodaj połączenie');
+    const draw = () => { const el = $('lk-code'); if (el) el.innerHTML = codeHtml(); };
+    if (myCode === undefined) window.Cloud.rpc('gym_my_code').then(c => { myCode = c || null; draw(); }).catch(e => { const m = linkErr(e); $('lk-msg') && ($('lk-msg').textContent = m === 'setup' ? 'Połączenia nie są jeszcze włączone w bazie danych' : m); });
+    overlay.querySelector('.sheet').addEventListener('click', async ev => {
+      if (ev.target.closest('[data-gencode]')) { try { myCode = await window.Cloud.rpc('gym_generate_code'); draw(); } catch (e) { toast(linkErr(e)); } }
+      else if (ev.target.closest('[data-copycode]')) { try { await navigator.clipboard.writeText(myCode); toast('Skopiowano kod'); } catch (_) { toast(myCode); } }
+      else if (ev.target.closest('[data-sendlink]')) {
+        const code = $('lk-in').value.trim().toUpperCase(), msg = $('lk-msg');
+        if (code.length < 6) { msg.textContent = 'Kod ma 6 znaków'; return; }
+        try { const st = await window.Cloud.rpc('gym_request_link', { p_code: code }); msg.textContent = st === 'accepted' ? 'Jesteście już połączeni' : 'Wysłano zaproszenie — czeka na akceptację'; $('lk-in').value = ''; loadLinks(true); }
+        catch (e) { const m = linkErr(e); msg.textContent = m === 'setup' ? 'Połączenia nie są jeszcze włączone w bazie danych' : m; }
+      }
+    });
+    $('lk-in').addEventListener('input', ev => { ev.target.value = ev.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+  }
+  async function linkAct(fn, args, ok) { try { await window.Cloud.rpc(fn, args); if (ok) toast(ok); } catch (e) { toast(linkErr(e) === 'setup' ? 'Połączenia nie są włączone w bazie' : linkErr(e)); } loadLinks(true); }
   function renderProgress() {
     const g = state.settings.weekGoal, ws0 = weekStart(new Date()), t = todayKey();
     const span = spanWorkouts(), wk = weekWorkouts(0).length, p = g ? wk / g : 0, lv = waterLevel(Math.min(1, p));
@@ -1063,7 +1152,9 @@
         <section class="scard${animTab ? ' enter' : ''}" style="--i:1">${calendarHtml()}</section>
         <section class="scard${animTab ? ' enter' : ''}" style="--i:2"><header><div><h3>Mięśnie</h3><small>ostatnie 8 tygodni</small></div></header>
           ${musL.length ? `<div class="mm heatmap">${bodyMap([], [], heat)}</div>` : '<p class="empty" style="padding:16px">Brak treningów w tym okresie</p>'}</section>
+        <section class="scard${animTab ? ' enter' : ''} links" style="--i:3" id="links-sec">${linksHtml()}</section>
       </div>`;
+    loadLinks();
     const ringEl = tabView.querySelector('.ring');
     if (ringEl && !calm() && prevRing !== lv) { const top = l => `calc(4% + ${(100 - l) * .96}%)`, from = prevRing ?? 0; ringEl.querySelectorAll('.wv').forEach(w => w.animate({ top: [top(from), top(lv)] }, { duration: 1300, easing: 'cubic-bezier(.3,.7,.3,1)' })); }
     prevRing = lv;
@@ -1355,6 +1446,16 @@
     if (T('[data-settings]')) { pushDetail({ type: 'settings' }); return; }
     if ((b = T('[data-lang]'))) { state.settings.lang = b.dataset.lang; applyLang(); save(); render(); return; }
     // ustawienia
+    if (T('[data-addlink]')) { if (!window.Cloud?.user) { toast('Zaloguj się, żeby łączyć konta'); return; } openLinks(); return; }
+    if ((b = T('[data-lacc]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lacc, p_accept: true }, 'Połączono'); return; }
+    if ((b = T('[data-lrej]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lrej, p_accept: false }); return; }
+    if ((b = T('[data-unlink]'))) {
+      const id = +b.dataset.unlink;
+      overlay.innerHTML = sheet('Usunąć połączenie?', 'Przestaniecie widzieć nawzajem swoje treningi', '<button class="primary" id="ul-yes">Usuń</button>', 'Usuń połączenie');
+      $('ul-yes').addEventListener('click', () => { close(); linkAct('gym_remove_link', { p_id: id }); });
+      return;
+    }
+    if ((b = T('[data-cmpw]'))) { cmpWeek = Math.min(0, cmpWeek + +b.dataset.cmpw); const sec = $('links-sec'); if (sec) sec.innerHTML = linksHtml(); return; }
     if ((b = T('[data-sex]'))) { state.settings.sex = b.dataset.sex; save(); render(); return; }
     if ((b = T('[data-unit]'))) { state.settings.unit = b.dataset.unit; save(); render(); return; }
     if ((b = T('[data-rest-set]'))) { state.settings.rest = +b.dataset.restSet; save(); render(); return; }

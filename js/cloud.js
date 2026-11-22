@@ -165,7 +165,7 @@
       status = 'syncing'; emit();
       try {
         const tok = await token();
-        const rows = await api('/rest/v1/gym_data?select=data', { token: tok });
+        const rows = await api(`/rest/v1/gym_data?user_id=eq.${session.user_id}&select=data`, { token: tok }); // tylko mój wiersz (połączone konta też są widoczne)
         const remote = rows?.[0]?.data?.items ? rows[0].data : { items: {}, ts: {} };
         // Stan lokalny czytamy dopiero PO pobraniu z chmury, żeby objąć kliknięcia z czasu pobierania.
         trackLocal();
@@ -239,5 +239,12 @@
       status = 'idle'; lastSync = null; emit();
     },
     syncNow: () => sync(),
+    // połączenia kont: funkcje w bazie (supabase/connections.sql) i odczyt danych połączonej osoby
+    async rpc(name, args = {}) { return api('/rest/v1/rpc/' + name, { method: 'POST', token: await token(), body: args }); },
+    async partner(id) {
+      const rows = await api(`/rest/v1/gym_data?user_id=eq.${encodeURIComponent(id)}&select=data`, { token: await token() });
+      const items = rows?.[0]?.data?.items;
+      return items ? unflatten(items) : null;
+    },
   };
 })();
