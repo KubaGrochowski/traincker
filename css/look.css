@@ -295,3 +295,20 @@ body:not(.gate) #app-main { position: fixed; inset: 0; overflow: hidden; max-wid
 .dd-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .dd-foot .wc-more { margin: 0; }
 .dd-del { height: 38px; padding: 0 14px; font-size: 13.5px; }
+
+/* ---------- Plany: archiwum (rozwijane, plany można przywrócić) ---------- */
+.arch { margin-top: 18px; }
+.arch-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 4px; color: var(--ink-2); font: 500 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; }
+.arch-h b { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); font: 500 11px var(--f-mono); color: var(--ink); }
+.arch-h .vd-ch { margin-left: auto; transition: transform .45s var(--spring); }
+.arch.open .arch-h .vd-ch { transform: rotate(180deg); }
+.arch-b { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .5s var(--ease); }
+.arch.open .arch-b { grid-template-rows: 1fr; }
+.arch-in { overflow: hidden; min-height: 0; }
+.arch-in .ilist { margin-top: 8px; opacity: 0; transform: translateY(-6px); transition: opacity .35s var(--ease), transform .45s var(--ease); }
+.arch.open .arch-in .ilist { opacity: 1; transform: none; transition-delay: .12s; }
+.arch-r { display: flex; align-items: center; gap: 12px; }
+.arch-r .ir-t { flex: 1; min-width: 0; opacity: .75; }
+.arch-back { flex: none; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--gold-lo); border: 1px solid var(--gold-bd); color: var(--ink); font: 500 13.5px var(--f-body); transition: transform .35s var(--spring); }
+.arch-back:active { transform: scale(.95); }
+body:not(.locked) .toast { bottom: calc(96px + var(--safe-b)); }

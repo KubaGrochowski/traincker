@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 46;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 47;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -829,19 +829,26 @@
   }
 
   /* ----- Plany ----- */
-  const routinesSorted = () => Object.values(state.routines).sort((a, b) => (a.order ?? a.created ?? 0) - (b.order ?? b.created ?? 0));
+  const archivedRoutines = () => Object.values(state.routines).filter(r => r.archived).sort((a, b) => b.archived - a.archived);
+  let archOpen = false;
+  function archiveRoutine(id) { const r = state.routines[id]; if (!r) return; r.archived = Date.now(); save(); close(); stack = stack.filter(z => !(z.type === 'r' && z.id === id)); render(); toast(`Plan „${r.name}” w archiwum`); }
+  const routinesSorted = () => Object.values(state.routines).filter(r => !r.archived).sort((a, b) => (a.order ?? a.created ?? 0) - (b.order ?? b.created ?? 0));
   function renderRoutines() {
     const rs = routinesSorted();
     const rows = rs.map((r, i) => { const last = finished().find(w => w.rid === r.id), sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow" data-r="${r.id}" style="--i:${i}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii${last ? ' · ostatnio ' + ago(last.start) : ''}</small></span><span class="rhandle" aria-label="Przesuń plan" title="Przytrzymaj i przesuń">${GRIP}</span></button>`; }).join('');
+    const ar = archivedRoutines();
+    const arch = ar.length ? `<div class="arch${archOpen ? ' open' : ''}"><button class="arch-h" data-archt aria-expanded="${archOpen}"><span>Archiwum</span><b>${ar.length}</b>${DCHEV}</button>
+      <div class="arch-b"><div class="arch-in"><div class="ilist">${ar.map(r => `<div class="irow static arch-r"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · w archiwum od ${shortDate(r.archived)}</small></span><button class="arch-back" data-runarch="${r.id}">Przywróć</button></div>`).join('')}</div></div></div></div>` : '';
     tabView.innerHTML = `${head('Plany')}
-      ${rs.length ? `<div class="ilist${animTab ? ' enter' : ''}">${rows}</div>` : emptyCard('Brak planów', 'Dodaj pierwszy plan przyciskiem +.', '<button class="primary acc" data-rnew>Nowy plan</button>')}`;
+      ${rs.length ? `<div class="ilist${animTab ? ' enter' : ''}">${rows}</div>` : emptyCard('Brak planów', ar.length ? 'Wszystkie plany są w archiwum.' : 'Dodaj pierwszy plan przyciskiem +.')}${arch}`;
   }
   // przytrzymanie wiersza planu (ok. pół sekundy) pyta o usunięcie
   let lpT = null, lpStart = null, lpFired = false;
   function askDeleteRoutine(id) {
     const r = state.routines[id]; if (!r) return;
     navigator.vibrate?.(20);
-    overlay.innerHTML = sheet('Usunąć plan?', esc(r.name), `<p class="hint">Treningi zrobione z tego planu zostaną w historii.</p><div class="confirm"><button data-close>Anuluj</button><button class="yes" id="lp-yes">Usuń</button></div>`, 'Usuń plan');
+    overlay.innerHTML = sheet(esc(r.name), 'Treningi zrobione z tego planu zostaną w historii', `<div class="ilist"><button class="irow" id="lp-arch"><span class="ir-t"><b>Przenieś do archiwum</b><small>zniknie z listy, zawsze można go przywrócić</small></span></button></div><div class="ilist"><button class="irow out" id="lp-yes"><span class="ir-t"><b>Usuń plan</b></span></button></div>`, 'Opcje planu');
+    $('lp-arch').addEventListener('click', () => archiveRoutine(id));
     $('lp-yes').addEventListener('click', () => { delete state.routines[id]; save(); close(); render(); toast(`Usunięto plan „${r.name}”`); });
   }
   tabView.addEventListener('pointerdown', e => {
@@ -932,7 +939,8 @@
   }
   function routineMenu(id) {
     const r = state.routines[id];
-    overlay.innerHTML = sheet(esc(r.name), '', `<div class="ilist"><button class="irow" data-rm="dup"><span class="ir-t"><b>Duplikuj plan</b></span></button></div><div class="ilist"><button class="irow out" data-rm="del"><span class="ir-t"><b>Usuń plan</b><small>treningi z tego planu zostaną w historii</small></span></button></div>`, 'Opcje planu');
+    overlay.innerHTML = sheet(esc(r.name), '', `<div class="ilist"><button class="irow" data-rm="dup"><span class="ir-t"><b>Duplikuj plan</b></span></button><button class="irow" data-rm="arch"><span class="ir-t"><b>Przenieś do archiwum</b><small>zniknie z listy, zawsze można go przywrócić</small></span></button></div><div class="ilist"><button class="irow out" data-rm="del"><span class="ir-t"><b>Usuń plan</b><small>treningi z tego planu zostaną w historii</small></span></button></div>`, 'Opcje planu');
+    overlay.querySelector('[data-rm="arch"]').addEventListener('click', () => archiveRoutine(id));
     overlay.querySelector('[data-rm="dup"]').addEventListener('click', () => { const c = { ...deep(r), id: uid('r'), name: r.name + ' (kopia)', created: Date.now() }; delete c.order; state.routines[c.id] = c; save(); close(); stack[stack.length - 1] = { type: 'r', id: c.id }; render(); toast('Skopiowano plan'); });
     overlay.querySelector('[data-rm="del"]').addEventListener('click', () => { delete state.routines[id]; save(); close(); stack = stack.filter(z => !(z.type === 'r' && z.id === id)); render(); toast('Plan usunięty'); });
   }
@@ -1611,6 +1619,8 @@
     if (T('[data-addlink]')) { if (!window.Cloud?.user) { toast('Zaloguj się, żeby łączyć konta'); return; } openLinks(); return; }
     if ((b = T('[data-lacc]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lacc, p_accept: true }, 'Połączono'); return; }
     if ((b = T('[data-lrej]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lrej, p_accept: false }); return; }
+    if ((b = T('[data-archt]'))) { const a = b.closest('.arch'); archOpen = !a.classList.contains('open'); a.classList.toggle('open', archOpen); b.setAttribute('aria-expanded', archOpen); return; }
+    if ((b = T('[data-runarch]'))) { const r = state.routines[b.dataset.runarch]; if (!r) return; delete r.archived; save(); render(); toast(`Przywrócono plan „${r.name}”`); return; }
     if ((b = T('[data-wdel]'))) { // usunięcie treningu (drugie dotknięcie po „Na pewno?”)
       const w = state.workouts[b.dataset.wdel]; if (!w) return;
       delete state.workouts[w.id]; finished().filter(x => x.start > w.start).reverse().forEach(x => { x.prs = computePRs(x); });
