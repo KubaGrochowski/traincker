@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 48;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 49;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -843,13 +843,15 @@
     const l = partnerL(), rs = sharedFrom(); if (!rs.length) return '';
     return `<div class="grp"><h3>Od partnera</h3><em>${nameOf(l)}</em></div><div class="ilist">${rs.map(r => { const sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow sh-r" data-sr="${esc(r.id)}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii · udostępniony</small></span>${uBadge(false)}${CHEV}</button>`; }).join('')}</div>`;
   }
-  function toggleShare(id) {
+  async function toggleShare(id) {
     const r = state.routines[id]; if (!r) return;
     if (r.shared) { delete r.shared; toast(`Plan „${r.name}” nie jest już udostępniany`); }
-    else { if (!partnerL()) { close(); toast('Najpierw dodaj partnera w Postępach'); return; } r.shared = Date.now(); toast(`Udostępniono partnerowi: „${r.name}”`); }
+    else {
+      if (!partnerL()) await loadLinks(true); // informacje o partnerze mogły się jeszcze nie wczytać
+      if (!partnerL()) { close(); toast(window.Cloud?.user ? 'Najpierw dodaj partnera w Postępach' : 'Zaloguj się, żeby udostępniać plany'); return; } r.shared = Date.now(); toast(`Udostępniono partnerowi: „${r.name}”`); }
     save(); close(); render();
   }
-  const shareRow = (r, attr) => partnerL() || r.shared ? `<button class="irow" ${attr}><span class="ir-t"><b>${r.shared ? 'Przestań udostępniać' : 'Udostępnij partnerowi'}</b><small>${r.shared ? 'partner przestanie widzieć ten plan' : 'plan pojawi się u partnera w Planach'}</small></span></button>` : '';
+  const shareRow = (r, attr) => partnerL() || r.shared || (window.Cloud?.user && links.list === null) ? `<button class="irow" ${attr}><span class="ir-t"><b>${r.shared ? 'Przestań udostępniać' : 'Udostępnij partnerowi'}</b><small>${r.shared ? 'partner przestanie widzieć ten plan' : 'plan pojawi się u partnera w Planach'}</small></span></button>` : '';
   function renderRoutines() {
     const rs = routinesSorted();
     const rows = rs.map((r, i) => { const last = finished().find(w => w.rid === r.id), sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow" data-r="${r.id}" style="--i:${i}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii${last ? ' · ostatnio ' + ago(last.start) : ''}</small></span>${r.shared ? uBadge(true) : ''}<span class="rhandle" aria-label="Przesuń plan" title="Przytrzymaj i przesuń">${GRIP}</span></button>`; }).join('');
@@ -1240,15 +1242,18 @@
   const KEY_MUS = ['chest', 'shoulders', 'biceps', 'triceps', 'lats', 'middle back', 'lower back', 'abdominals', 'glutes', 'quadriceps', 'hamstrings', 'calves'];
   const nameOf = l => l?.email ? esc(l.email.split('@')[0]) : 'Partner';
   const linkErr = e => /code_not_found/.test(e?.message) ? 'Nie ma konta z takim kodem' : /own_code/.test(e?.message) ? 'To Twój własny kod' : (e?.status === 404 || /PGRST202|Could not find the function|gym_/.test(`${e?.code} ${e?.message}`)) ? 'setup' : navigator.onLine === false ? 'Brak internetu' : (e?.message || 'Coś poszło nie tak');
-  async function loadLinks(force) {
-    if (!window.Cloud?.user || links.loading || (!force && Date.now() - links.at < 30000)) return;
-    links.loading = true;
+  function loadLinks(force) {
+    if (links.loading) return links.loading; // trwa wczytywanie: czekaj na nie zamiast zaczynać drugie
+    if (!window.Cloud?.user || (!force && Date.now() - links.at < 8000)) return Promise.resolve();
+    return (links.loading = fetchLinks());
+  }
+  async function fetchLinks() {
     try {
       links.list = await window.Cloud.rpc('gym_links_list') || [];
       await Promise.all(links.list.filter(l => l.status === 'accepted').map(async l => { try { links.data[l.other] = await window.Cloud.partner(l.other); } catch (_) { } }));
       links.at = Date.now(); links.err = '';
     } catch (e) { links.err = linkErr(e); }
-    finally { links.loading = false; }
+    finally { links.loading = null; }
     const sec = $('links-sec'); if (sec && tab === 'progress') sec.innerHTML = linksHtml();
     const si = $('shared-in'); if (si && tab === 'routines') { si.innerHTML = sharedInHtml(); tabView.querySelectorAll('.ubadge').forEach(u => u.style.setProperty('--uc', partnerCol())); }
   }
