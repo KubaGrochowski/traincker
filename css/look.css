@@ -292,3 +292,6 @@ body:not(.gate) #app-main { position: fixed; inset: 0; overflow: hidden; max-wid
 .hl-lab em { font: 500 12px var(--f-mono); font-style: normal; color: var(--ink-2); }
 .hl-lab span:first-child b { color: var(--mc-lo); filter: brightness(1.6); }
 .hl-lab span:last-child b { color: var(--mc-hi); }
+.dd-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.dd-foot .wc-more { margin: 0; }
+.dd-del { height: 38px; padding: 0 14px; font-size: 13.5px; }

@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 45;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 46;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -490,7 +490,7 @@
       }).join('');
       return `<section class="dday" data-wid="${w.id}"><div class="dd-h"><div class="dd-t"><small>${dateLabel(w.start)}</small><b>${esc(w.name)}</b></div><span class="dd-dur">${fmtDur(st.ms)}</span></div>
         <div class="dd-pr${n ? ' on' : ''}">${STAR}<span>${n ? `${n} ${plural(n, 'rekord', 'rekordy', 'rekordów')}` : 'Bez rekordów'}</span></div>
-        <ul class="dxl">${ex}</ul><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button></section>`;
+        <ul class="dxl">${ex}</ul><div class="dd-foot"><button class="wc-more" data-w="${w.id}">Szczegóły treningu ${CHEV}</button><button class="danger dd-del" data-wdel="${w.id}">Usuń trening</button></div></section>`;
     }).join('');
   }
   // zmiana dnia: partie na sylwetkach przechodzą płynnie
@@ -1611,6 +1611,11 @@
     if (T('[data-addlink]')) { if (!window.Cloud?.user) { toast('Zaloguj się, żeby łączyć konta'); return; } openLinks(); return; }
     if ((b = T('[data-lacc]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lacc, p_accept: true }, 'Połączono'); return; }
     if ((b = T('[data-lrej]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lrej, p_accept: false }); return; }
+    if ((b = T('[data-wdel]'))) { // usunięcie treningu (drugie dotknięcie po „Na pewno?”)
+      const w = state.workouts[b.dataset.wdel]; if (!w) return;
+      delete state.workouts[w.id]; finished().filter(x => x.start > w.start).reverse().forEach(x => { x.prs = computePRs(x); });
+      save(); render(); toast('Usunięto trening'); return;
+    }
     if ((b = T('[data-unlink]'))) { linkAct('gym_remove_link', { p_id: +b.dataset.unlink }); return; }
     if ((b = T('[data-cmpw]'))) { cmpWeek = Math.min(0, cmpWeek + +b.dataset.cmpw); const sec = $('links-sec'); if (sec) sec.innerHTML = linksHtml(); return; }
     if ((b = T('[data-sex]'))) { state.settings.sex = b.dataset.sex; save(); render(); return; }
