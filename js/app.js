@@ -5,7 +5,7 @@
   'use strict';
   if (document.documentElement.classList.contains('pcframe')) return; // komputer: aplikacja działa w ramce telefonu (iframe)
 
-  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 47;
+  const STORAGE_KEY = 'ggym.v1', REST_KEY = 'ggym.rest', APP_VERSION = 48;
   const DAYS_FULL = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const DAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
   const MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -781,8 +781,9 @@
     const d = stack[stack.length - 1];
     if (d.type === 'w' && !state.workouts[d.id]) { stack.pop(); return render(); }
     if (d.type === 'r' && !state.routines[d.id]) { stack.pop(); return render(); }
+    if (d.type === 'sr' && !sharedR(d.id)) { stack.pop(); return render(); }
     const sy = dtLayer.scrollTop;
-    dtLayer.innerHTML = d.type === 'w' ? workoutScreen(d) : d.type === 'r' ? routineScreen(d) : d.type === 'ex' ? exerciseScreen(d) : d.type === 'settings' ? settingsScreen() : '';
+    dtLayer.innerHTML = d.type === 'w' ? workoutScreen(d) : d.type === 'r' ? routineScreen(d) : d.type === 'sr' ? sharedScreen(d) : d.type === 'ex' ? exerciseScreen(d) : d.type === 'settings' ? settingsScreen() : '';
     dtLayer.scrollTop = sy;
     if (d.type === 'ex') bindChart(d);
     if (d.fresh) { delete d.fresh; const n = dtLayer.querySelector('[data-rname]'); if (n && matchMedia('(hover: hover)').matches) { n.focus(); n.select(); } }
@@ -832,23 +833,41 @@
   const archivedRoutines = () => Object.values(state.routines).filter(r => r.archived).sort((a, b) => b.archived - a.archived);
   let archOpen = false;
   function archiveRoutine(id) { const r = state.routines[id]; if (!r) return; r.archived = Date.now(); save(); close(); stack = stack.filter(z => !(z.type === 'r' && z.id === id)); render(); toast(`Plan „${r.name}” w archiwum`); }
-  const routinesSorted = () => Object.values(state.routines).filter(r => !r.archived).sort((a, b) => (a.order ?? a.created ?? 0) - (b.order ?? b.created ?? 0));
+  const routinesSorted = () => Object.values(state.routines).filter(r => !r.archived).sort((a, b) => (!!a.shared - !!b.shared) || (a.order ?? a.created ?? 0) - (b.order ?? b.created ?? 0));
+  // partner = pierwsze zaakceptowane połączenie; kolor U = płeć partnera
+  const partnerL = () => links.list?.find(l => l.status === 'accepted') || null;
+  const partnerCol = () => { const l = partnerL(), P = l && links.data[l.other]; return P ? SEX_COL[P.settings?.sex === 'f' ? 'f' : 'm'] : 'var(--accent)'; };
+  const sharedFrom = () => { const l = partnerL(), P = l && links.data[l.other]; return P ? Object.values(P.routines || {}).filter(r => r && r.shared && !r.archived && Array.isArray(r.ex)).sort((a, b) => (a.order ?? a.created ?? 0) - (b.order ?? b.created ?? 0)) : []; };
+  const uBadge = fill => `<span class="ubadge ${fill ? 'fill' : 'line'}" style="--uc:${partnerCol()}" title="${fill ? 'Udostępniony partnerowi' : 'Udostępniony przez partnera'}">U</span>`;
+  function sharedInHtml() {
+    const l = partnerL(), rs = sharedFrom(); if (!rs.length) return '';
+    return `<div class="grp"><h3>Od partnera</h3><em>${nameOf(l)}</em></div><div class="ilist">${rs.map(r => { const sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow sh-r" data-sr="${esc(r.id)}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii · udostępniony</small></span>${uBadge(false)}${CHEV}</button>`; }).join('')}</div>`;
+  }
+  function toggleShare(id) {
+    const r = state.routines[id]; if (!r) return;
+    if (r.shared) { delete r.shared; toast(`Plan „${r.name}” nie jest już udostępniany`); }
+    else { if (!partnerL()) { close(); toast('Najpierw dodaj partnera w Postępach'); return; } r.shared = Date.now(); toast(`Udostępniono partnerowi: „${r.name}”`); }
+    save(); close(); render();
+  }
+  const shareRow = (r, attr) => partnerL() || r.shared ? `<button class="irow" ${attr}><span class="ir-t"><b>${r.shared ? 'Przestań udostępniać' : 'Udostępnij partnerowi'}</b><small>${r.shared ? 'partner przestanie widzieć ten plan' : 'plan pojawi się u partnera w Planach'}</small></span></button>` : '';
   function renderRoutines() {
     const rs = routinesSorted();
-    const rows = rs.map((r, i) => { const last = finished().find(w => w.rid === r.id), sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow" data-r="${r.id}" style="--i:${i}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii${last ? ' · ostatnio ' + ago(last.start) : ''}</small></span><span class="rhandle" aria-label="Przesuń plan" title="Przytrzymaj i przesuń">${GRIP}</span></button>`; }).join('');
+    const rows = rs.map((r, i) => { const last = finished().find(w => w.rid === r.id), sets = r.ex.reduce((a, e) => a + (+e.n || 0), 0); return `<button class="irow" data-r="${r.id}" style="--i:${i}"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · ${sets} serii${last ? ' · ostatnio ' + ago(last.start) : ''}</small></span>${r.shared ? uBadge(true) : ''}<span class="rhandle" aria-label="Przesuń plan" title="Przytrzymaj i przesuń">${GRIP}</span></button>`; }).join('');
     const ar = archivedRoutines();
     const arch = ar.length ? `<div class="arch${archOpen ? ' open' : ''}"><button class="arch-h" data-archt aria-expanded="${archOpen}"><span>Archiwum</span><b>${ar.length}</b>${DCHEV}</button>
       <div class="arch-b"><div class="arch-in"><div class="ilist">${ar.map(r => `<div class="irow static arch-r"><span class="ir-t"><b>${esc(r.name)}</b><small>${r.ex.length} ćw. · w archiwum od ${shortDate(r.archived)}</small></span><button class="arch-back" data-runarch="${r.id}">Przywróć</button></div>`).join('')}</div></div></div></div>` : '';
     tabView.innerHTML = `${head('Plany')}
-      ${rs.length ? `<div class="ilist${animTab ? ' enter' : ''}">${rows}</div>` : emptyCard('Brak planów', ar.length ? 'Wszystkie plany są w archiwum.' : 'Dodaj pierwszy plan przyciskiem +.')}${arch}`;
+      ${rs.length ? `<div class="ilist${animTab ? ' enter' : ''}">${rows}</div>` : emptyCard('Brak planów', ar.length ? 'Wszystkie plany są w archiwum.' : 'Dodaj pierwszy plan przyciskiem +.')}<div id="shared-in">${sharedInHtml()}</div>${arch}`;
+    loadLinks();
   }
   // przytrzymanie wiersza planu (ok. pół sekundy) pyta o usunięcie
   let lpT = null, lpStart = null, lpFired = false;
   function askDeleteRoutine(id) {
     const r = state.routines[id]; if (!r) return;
     navigator.vibrate?.(20);
-    overlay.innerHTML = sheet(esc(r.name), 'Treningi zrobione z tego planu zostaną w historii', `<div class="ilist"><button class="irow" id="lp-arch"><span class="ir-t"><b>Przenieś do archiwum</b><small>zniknie z listy, zawsze można go przywrócić</small></span></button></div><div class="ilist"><button class="irow out" id="lp-yes"><span class="ir-t"><b>Usuń plan</b></span></button></div>`, 'Opcje planu');
+    overlay.innerHTML = sheet(esc(r.name), 'Treningi zrobione z tego planu zostaną w historii', `<div class="ilist">${shareRow(r, 'id="lp-share"')}<button class="irow" id="lp-arch"><span class="ir-t"><b>Przenieś do archiwum</b><small>zniknie z listy, zawsze można go przywrócić</small></span></button></div><div class="ilist"><button class="irow out" id="lp-yes"><span class="ir-t"><b>Usuń plan</b></span></button></div>`, 'Opcje planu');
     $('lp-arch').addEventListener('click', () => archiveRoutine(id));
+    $('lp-share')?.addEventListener('click', () => toggleShare(id));
     $('lp-yes').addEventListener('click', () => { delete state.routines[id]; save(); close(); render(); toast(`Usunięto plan „${r.name}”`); });
   }
   tabView.addEventListener('pointerdown', e => {
@@ -910,6 +929,23 @@
       <div class="grp"><h3>Ćwiczenia</h3><em>${r.ex.length} ćw. · ${sets} serii</em></div>
       <div class="ilist">${rows}<button class="irow addrow" data-radd>${PLUSC}<span class="ir-t"><b>Dodaj ćwiczenie</b></span></button></div></div>`;
   }
+  const sharedR = id => sharedFrom().find(r => r.id === id);
+  // ćwiczenia własne partnera trafiają do mnie, żeby trening z jego planu miał nazwy i mięśnie
+  function adoptEx(r) { const P = links.data[partnerL()?.other] || {}; r.ex.forEach(e => { const x = P.exercises?.[e.eid]; if (x && !exById(e.eid)) state.exercises[e.eid] = deep(x); }); }
+  function sharedScreen(d) {
+    const r = sharedR(d.id), l = partnerL(), P = links.data[l.other] || {};
+    const xo = e => exById(e.eid) || P.exercises?.[e.eid] || exOf(e);
+    const sets = r.ex.reduce((a, e) => a + (+e.n || 0) + (+e.w || 0), 0);
+    const rows = groupsOf(r.ex).map(([i0, g]) => { const inner = g.map(e => `<div class="irow static"><span class="ir-t"><b>${esc(xo(e).name)}</b><small>${e.w ? `${e.w} ${plural(e.w, 'rozgrzewkowa', 'rozgrzewkowe', 'rozgrzewkowych')} + ` : ''}${e.n} ${plural(e.n, 'seria', 'serie', 'serii')}</small>${e.note ? `<small class="nt">${esc(e.note)}</small>` : ''}</span></div>`).join(''); return g.length > 1 ? `<div class="ssg in"><div class="ss-l">Superseria</div>${inner}</div>` : inner; }).join('');
+    return `${dtBar('')}<div class="dt-body">
+      <h1 class="big">${esc(r.name)}</h1>
+      <p class="sh-from">${uBadge(false)}<span>Udostępnione przez <b>${nameOf(l)}</b></span></p>
+      <button class="startbtn" data-srstart="${esc(r.id)}" ${r.ex.length ? '' : 'disabled'}><span>Start!</span>${SEA_SVG}</button>
+      ${r.note ? `<div class="ilist"><div class="irow static"><span class="ir-t"><b>Notatka</b><small>${esc(r.note)}</small></span></div></div>` : ''}
+      <div class="grp"><h3>Ćwiczenia</h3><em>${r.ex.length} ćw. · ${sets} serii</em></div>
+      <div class="ilist">${rows}</div>
+      <div class="ilist"><button class="irow" data-srcopy="${esc(r.id)}"><span class="ir-t"><b>Zapisz kopię w moich planach</b><small>możesz ją potem dowolnie zmieniać</small></span></button></div></div>`;
+  }
   function routineEx(rid, i) {
     const r = state.routines[rid], e = r.ex[i], x = exOf(e), next = r.ex[i + 1];
     let w = e.w || 0, n = e.n || 1;
@@ -939,9 +975,10 @@
   }
   function routineMenu(id) {
     const r = state.routines[id];
-    overlay.innerHTML = sheet(esc(r.name), '', `<div class="ilist"><button class="irow" data-rm="dup"><span class="ir-t"><b>Duplikuj plan</b></span></button><button class="irow" data-rm="arch"><span class="ir-t"><b>Przenieś do archiwum</b><small>zniknie z listy, zawsze można go przywrócić</small></span></button></div><div class="ilist"><button class="irow out" data-rm="del"><span class="ir-t"><b>Usuń plan</b><small>treningi z tego planu zostaną w historii</small></span></button></div>`, 'Opcje planu');
+    overlay.innerHTML = sheet(esc(r.name), '', `<div class="ilist">${shareRow(r, 'data-rm="share"')}<button class="irow" data-rm="dup"><span class="ir-t"><b>Duplikuj plan</b></span></button><button class="irow" data-rm="arch"><span class="ir-t"><b>Przenieś do archiwum</b><small>zniknie z listy, zawsze można go przywrócić</small></span></button></div><div class="ilist"><button class="irow out" data-rm="del"><span class="ir-t"><b>Usuń plan</b><small>treningi z tego planu zostaną w historii</small></span></button></div>`, 'Opcje planu');
     overlay.querySelector('[data-rm="arch"]').addEventListener('click', () => archiveRoutine(id));
-    overlay.querySelector('[data-rm="dup"]').addEventListener('click', () => { const c = { ...deep(r), id: uid('r'), name: r.name + ' (kopia)', created: Date.now() }; delete c.order; state.routines[c.id] = c; save(); close(); stack[stack.length - 1] = { type: 'r', id: c.id }; render(); toast('Skopiowano plan'); });
+    overlay.querySelector('[data-rm="share"]')?.addEventListener('click', () => toggleShare(id));
+    overlay.querySelector('[data-rm="dup"]').addEventListener('click', () => { const c = { ...deep(r), id: uid('r'), name: r.name + ' (kopia)', created: Date.now() }; delete c.order; delete c.shared; state.routines[c.id] = c; save(); close(); stack[stack.length - 1] = { type: 'r', id: c.id }; render(); toast('Skopiowano plan'); });
     overlay.querySelector('[data-rm="del"]').addEventListener('click', () => { delete state.routines[id]; save(); close(); stack = stack.filter(z => !(z.type === 'r' && z.id === id)); render(); toast('Plan usunięty'); });
   }
   /* ----- Ćwiczenia ----- */
@@ -1201,7 +1238,7 @@
   const links = { list: null, at: 0, data: {}, loading: false, err: '' };
   let myCode, cmpWeek = 0;
   const KEY_MUS = ['chest', 'shoulders', 'biceps', 'triceps', 'lats', 'middle back', 'lower back', 'abdominals', 'glutes', 'quadriceps', 'hamstrings', 'calves'];
-  const nameOf = l => l.email ? esc(l.email.split('@')[0]) : 'Druga osoba';
+  const nameOf = l => l?.email ? esc(l.email.split('@')[0]) : 'Partner';
   const linkErr = e => /code_not_found/.test(e?.message) ? 'Nie ma konta z takim kodem' : /own_code/.test(e?.message) ? 'To Twój własny kod' : (e?.status === 404 || /PGRST202|Could not find the function|gym_/.test(`${e?.code} ${e?.message}`)) ? 'setup' : navigator.onLine === false ? 'Brak internetu' : (e?.message || 'Coś poszło nie tak');
   async function loadLinks(force) {
     if (!window.Cloud?.user || links.loading || (!force && Date.now() - links.at < 30000)) return;
@@ -1213,6 +1250,7 @@
     } catch (e) { links.err = linkErr(e); }
     finally { links.loading = false; }
     const sec = $('links-sec'); if (sec && tab === 'progress') sec.innerHTML = linksHtml();
+    const si = $('shared-in'); if (si && tab === 'routines') { si.innerHTML = sharedInHtml(); tabView.querySelectorAll('.ubadge').forEach(u => u.style.setProperty('--uc', partnerCol())); }
   }
   // statystyki tygodnia dla dowolnej osoby (moje dane albo dane połączonej osoby)
   function weekOf(st, off) {
@@ -1230,7 +1268,7 @@
   const pct = (a, b) => !b ? (a ? '+100%' : '—') : `${a >= b ? '+' : ''}${Math.round((a - b) / b * 100)}%`;
   function cmpHtml(l) {
     const P = links.data[l.other];
-    if (!P) return `<div class="cmp"><p class="empty">${links.loading ? 'Ładowanie…' : 'Brak danych drugiej osoby'}</p></div>`;
+    if (!P) return `<div class="cmp"><p class="empty">${links.loading ? 'Ładowanie…' : 'Brak danych partnera'}</p></div>`;
     const me = weekOf(state, cmpWeek), th = weekOf(P, cmpWeek), meP = weekOf(state, cmpWeek - 1), thP = weekOf(P, cmpWeek - 1);
     const a = addDays(weekStart(new Date()), cmpWeek * 7), e = addDays(a, 6);
     const lbl = cmpWeek === 0 ? 'Ten tydzień' : cmpWeek === -1 ? 'Poprzedni tydzień' : `${a.getDate()} ${MON_S[a.getMonth()]} – ${e.getDate()} ${MON_S[e.getMonth()]}`;
@@ -1250,27 +1288,28 @@
         <div class="cr">${prog(me, meP)}<span>Progres objętości</span>${prog(th, thP)}</div>
       </div>
       <div class="cmp-miss"><div><small>Ty — nie trenowane</small><p>${miss(me)}</p></div><div><small>${nameOf(l)} — nie trenowane</small><p>${miss(th)}</p></div></div>
-      <button class="link-x danger" data-unlink="${l.id}">Usuń połączenie</button>
+      <button class="link-x danger" data-unlink="${l.id}">Usuń partnera</button>
     </div>`;
   }
   function linksHtml() {
-    const hd = `<header><div><h3>Połączenia</h3><small>porównanie treningów</small></div><button class="addlink" data-addlink>${PLUS}Dodaj połączenie</button></header>`;
-    if (!window.Cloud?.user) return hd + '<p class="empty lk-e">Zaloguj się, żeby łączyć konta</p>';
+    const hasP = !!partnerL();
+    const hd = `<header><div><h3>Partner</h3><small>${hasP ? 'wasze treningi w tygodniu' : 'porównanie treningów i wspólne plany'}</small></div>${hasP ? '' : `<button class="addlink" data-addlink>${PLUS}Dodaj partnera</button>`}</header>`;
+    if (!window.Cloud?.user) return hd + '<p class="empty lk-e">Zaloguj się, żeby dodać partnera</p>';
     if (links.err === 'setup') return hd + '<p class="empty lk-e">Połączenia nie są jeszcze włączone w bazie danych</p>';
     if (links.list === null) return hd + `<p class="empty lk-e">${links.err ? esc(links.err) : 'Ładowanie…'}</p>`;
     const inc = links.list.filter(l => l.status === 'pending' && l.incoming), out = links.list.filter(l => l.status === 'pending' && !l.incoming), acc = links.list.filter(l => l.status === 'accepted');
     let h = hd;
-    h += inc.map(l => `<div class="lk-req"><span><b>${esc(l.email || 'Ktoś')}</b> chce się połączyć</span><button class="lk-yes" data-lacc="${l.id}">Akceptuj</button><button class="lk-no" data-lrej="${l.id}">Odrzuć</button></div>`).join('');
+    h += inc.map(l => `<div class="lk-req"><span><b>${esc(l.email || 'Ktoś')}</b> chce zostać Twoim partnerem</span><button class="lk-yes" data-lacc="${l.id}">Akceptuj</button><button class="lk-no" data-lrej="${l.id}">Odrzuć</button></div>`).join('');
     h += out.map(l => `<div class="lk-req out"><span>Zaproszenie${l.code ? ` do <b>${esc(l.code)}</b>` : ''} czeka na akceptację</span><button class="lk-no" data-arm data-unlink="${l.id}">Wycofaj</button></div>`).join('');
-    h += acc.map(cmpHtml).join('');
-    if (!links.list.length) h += '<p class="empty lk-e">Połącz się kodem z drugą osobą i porównujcie, które partie przetrenowaliście w tygodniu</p>';
+    h += acc.slice(0, 1).map(cmpHtml).join('');
+    if (!links.list.length) h += '<p class="empty lk-e">Dodaj partnera kodem — porównujcie treningi i udostępniajcie sobie plany</p>';
     return h;
   }
   function openLinks() {
     const codeHtml = () => myCode ? `<b class="lk-code">${esc(myCode)}</b><button class="lk-copy" data-copycode>Kopiuj</button>` : myCode === null ? '<button class="primary acc" data-gencode>Wygeneruj kod</button>' : '<span class="hint">Ładowanie…</span>';
-    overlay.innerHTML = sheet('Dodaj połączenie', 'Połączcie konta i porównujcie treningi', `
-      <div class="lk-sec"><small>Twój kod</small><div class="lk-row" id="lk-code">${codeHtml()}</div><p class="hint">Podaj go drugiej osobie. Kod jest przypisany do Twojego konta na stałe.</p></div>
-      <div class="lk-sec"><small>Kod drugiej osoby</small><div class="lk-row"><input id="lk-in" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="np. K7M2QX"><button class="primary acc" data-sendlink>Połącz</button></div><p class="hint" id="lk-msg">Druga osoba musi zaakceptować zaproszenie.</p></div>`, 'Dodaj połączenie');
+    overlay.innerHTML = sheet('Dodaj partnera', 'Połączcie konta, porównujcie treningi i udostępniajcie plany', `
+      <div class="lk-sec"><small>Twój kod</small><div class="lk-row" id="lk-code">${codeHtml()}</div><p class="hint">Podaj go partnerowi. Kod jest przypisany do Twojego konta na stałe.</p></div>
+      <div class="lk-sec"><small>Kod partnera</small><div class="lk-row"><input id="lk-in" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="np. K7M2QX"><button class="primary acc" data-sendlink>Połącz</button></div><p class="hint" id="lk-msg">Partner musi zaakceptować zaproszenie.</p></div>`, 'Dodaj partnera');
     const draw = () => { const el = $('lk-code'); if (el) el.innerHTML = codeHtml(); };
     if (myCode === undefined) window.Cloud.rpc('gym_my_code').then(c => { myCode = c || null; draw(); }).catch(e => { const m = linkErr(e); $('lk-msg') && ($('lk-msg').textContent = m === 'setup' ? 'Połączenia nie są jeszcze włączone w bazie danych' : m); });
     overlay.querySelector('.sheet').addEventListener('click', async ev => {
@@ -1590,6 +1629,9 @@
     if ((b = T('[data-wmenu]'))) { workoutActions(b.dataset.wmenu); return; }
     if ((b = T('[data-wprs]'))) { const w = state.workouts[b.dataset.wprs]; if (w?.prs?.length) openPRs(w); return; }
     if ((b = T('[data-repeat]'))) { const w = state.workouts[b.dataset.repeat]; if (w) startWorkout({ name: w.name, rid: w.rid, ex: w.ex.map(e => ({ eid: e.eid, sup: e.sup, note: e.note, tg: e.sets })) }); return; }
+    if ((b = T('[data-sr]'))) { pushDetail({ type: 'sr', id: b.dataset.sr }); return; }
+    if ((b = T('[data-srstart]'))) { const r = sharedR(b.dataset.srstart); if (!r) return; if (!calm()) ripple(e.clientX, e.clientY, 1.6); adoptEx(r); startWorkout({ name: r.name, note: r.note || '', ex: r.ex.map(x => ({ eid: x.eid, w: x.w || 0, n: x.n || 1, sup: x.sup, note: x.note })) }); return; }
+    if ((b = T('[data-srcopy]'))) { const r = sharedR(b.dataset.srcopy); if (!r) return; adoptEx(r); const c = { ...deep(r), id: uid('r'), created: Date.now(), order: Object.keys(state.routines).length + 1e3 }; delete c.shared; delete c.archived; state.routines[c.id] = c; save(); stack[stack.length - 1] = { type: 'r', id: c.id }; render(); toast('Zapisano kopię w Twoich planach'); return; }
     if ((b = T('[data-r]'))) { if (lpFired) { lpFired = false; return; } pushDetail({ type: 'r', id: b.dataset.r }); return; }
     if (T('[data-rnew]')) { newRoutine(); return; }
     if ((b = T('[data-rstart]'))) { if (!calm()) ripple(e.clientX, e.clientY, 1.6); startRoutine(b.dataset.rstart); return; }
@@ -1617,7 +1659,7 @@
     if ((b = T('[data-lang]'))) { state.settings.lang = b.dataset.lang; applyLang(); save(); render(); return; }
     // ustawienia
     if (T('[data-addlink]')) { if (!window.Cloud?.user) { toast('Zaloguj się, żeby łączyć konta'); return; } openLinks(); return; }
-    if ((b = T('[data-lacc]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lacc, p_accept: true }, 'Połączono'); return; }
+    if ((b = T('[data-lacc]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lacc, p_accept: true }, 'Jesteście partnerami'); return; }
     if ((b = T('[data-lrej]'))) { linkAct('gym_respond_link', { p_id: +b.dataset.lrej, p_accept: false }); return; }
     if ((b = T('[data-archt]'))) { const a = b.closest('.arch'); archOpen = !a.classList.contains('open'); a.classList.toggle('open', archOpen); b.setAttribute('aria-expanded', archOpen); return; }
     if ((b = T('[data-runarch]'))) { const r = state.routines[b.dataset.runarch]; if (!r) return; delete r.archived; save(); render(); toast(`Przywrócono plan „${r.name}”`); return; }

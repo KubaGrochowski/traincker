@@ -312,3 +312,11 @@ body:not(.gate) #app-main { position: fixed; inset: 0; overflow: hidden; max-wid
 .arch-back { flex: none; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--gold-lo); border: 1px solid var(--gold-bd); color: var(--ink); font: 500 13.5px var(--f-body); transition: transform .35s var(--spring); }
 .arch-back:active { transform: scale(.95); }
 body:not(.locked) .toast { bottom: calc(96px + var(--safe-b)); }
+
+/* udostępnione plany: U wypełnione (mój plan dla partnera) / U z obramowaniem (plan od partnera); kolor = płeć partnera */
+.ubadge { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; font: 600 13px/1 var(--f-mono); letter-spacing: 0; margin-left: 8px; }
+.ubadge.fill { background: var(--uc); color: #0C0B09; }
+.ubadge.line { border: 1.5px solid var(--uc); color: var(--uc); background: transparent; }
+.sh-from { display: flex; align-items: center; gap: 10px; margin: -6px 0 16px; color: var(--ink-2, rgba(255,255,255,.6)); font-size: 14px; }
+.sh-from .ubadge { margin: 0; }
+.sh-from b { color: var(--ink, #F2EDE4); font-weight: 500; }
